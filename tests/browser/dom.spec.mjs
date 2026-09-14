@@ -181,3 +181,79 @@ test('document-start protects parser-added code before DOMContentLoaded without 
     expect(await page.evaluate(() => window.earlyTranslate)).toBe('no');
     await protectedElement(page.locator('#early'));
 });
+
+test('existing and nested open shadow roots receive initial and dynamic protection', async ({ page }) => {
+    await page.setContent('<div id="host"></div>');
+    await page.evaluate(() => {
+        const root = document.getElementById('host').attachShadow({ mode: 'open' });
+        root.innerHTML = '<code id="initial">one()</code><div id="nested"></div>';
+        root.getElementById('nested').attachShadow({ mode: 'open' }).innerHTML = '<code id="nested-code">two()</code>';
+    });
+    await page.evaluate(script => (0, eval)(script), source);
+    await protectedElement(page.locator('#initial'));
+    await protectedElement(page.locator('#nested-code'));
+    await page.locator('#host').evaluate(node => node.shadowRoot.append(Object.assign(document.createElement('code'), { id: 'later', textContent: 'later()' })));
+    await protectedElement(page.locator('#later'));
+});
+
+test('shadow roots created after installation are tracked without changing native attachShadow behavior', async ({ page }) => {
+    await install(page, '<div id="open"></div><div id="closed"></div>');
+    const result = await page.evaluate(async () => {
+        const open = document.getElementById('open');
+        const root = open.attachShadow({ mode: 'open' });
+        root.innerHTML = '<code id="late-shadow">open()</code>';
+        const closed = document.getElementById('closed');
+        const closedRoot = closed.attachShadow({ mode: 'closed' });
+        closedRoot.innerHTML = '<code>closed()</code>';
+        let nativeError;
+        try { open.attachShadow({ mode: 'open' }); } catch (error) { nativeError = error.name; }
+        await new Promise(resolve => setTimeout(resolve, 0));
+        return { sameRoot: root === open.shadowRoot, closedHidden: closed.shadowRoot === null, closedTranslate: closedRoot.querySelector('code').getAttribute('translate'), nativeError };
+    });
+    await protectedElement(page.locator('#late-shadow'));
+    expect(result).toEqual({ sameRoot: true, closedHidden: true, closedTranslate: 'no', nativeError: 'NotSupportedError' });
+});
+
+test('detached shadow hosts and editor boundaries across shadow roots are reconciled on insertion and movement', async ({ page }) => {
+    await install(page, '<div id="editor" contenteditable></div>');
+    await page.evaluate(async () => {
+        const host = document.createElement('div');
+        host.id = 'detached';
+        host.attachShadow({ mode: 'open' }).innerHTML = '<code id="shadow-code">x()</code>';
+        await new Promise(resolve => setTimeout(resolve, 0));
+        document.body.append(host);
+    });
+    await protectedElement(page.locator('#shadow-code'));
+    await page.evaluate(() => document.getElementById('editor').append(document.getElementById('detached')));
+    await expect(page.locator('#shadow-code')).not.toHaveAttribute('translate');
+    await page.locator('#editor').evaluate(node => node.removeAttribute('contenteditable'));
+    await protectedElement(page.locator('#shadow-code'));
+});
+
+test('repeated installation does not stack attachShadow wrappers', async ({ page }) => {
+    await install(page);
+    const same = await page.evaluate(script => {
+        const before = Element.prototype.attachShadow;
+        (0, eval)(script);
+        return before === Element.prototype.attachShadow;
+    }, source);
+    expect(same).toBe(true);
+});
+
+test('parser-created declarative open shadow roots are discovered by DOMContentLoaded', async ({ page }) => {
+    await page.addInitScript(script => (0, eval)(script), source);
+    await page.route('https://fixture.test/declarative', route => route.fulfill({ contentType: 'text/html', body: '<div><template shadowrootmode="open"><code id="declarative">x()</code></template></div>' }));
+    await page.goto('https://fixture.test/declarative');
+    await protectedElement(page.locator('#declarative'));
+});
+
+test('an immutable attachShadow API still allows ordinary DOM and existing open roots', async ({ page }) => {
+    await page.setContent('<code id="ordinary">x()</code><div id="host"></div>');
+    await page.evaluate(() => {
+        document.getElementById('host').attachShadow({ mode: 'open' }).innerHTML = '<code id="existing">y()</code>';
+        Object.defineProperty(Element.prototype, 'attachShadow', { writable: false, configurable: false });
+    });
+    await page.evaluate(script => (0, eval)(script), source);
+    await protectedElement(page.locator('#ordinary'));
+    await protectedElement(page.locator('#existing'));
+});

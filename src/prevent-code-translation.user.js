@@ -15,6 +15,10 @@
 (() => {
     'use strict';
 
+    const INSTALLED = Symbol.for('jaem1n207.translationExclusions');
+    if (document[INSTALLED]) return;
+    Object.defineProperty(document, INSTALLED, { value: true });
+
     const EDITOR_CLASSES = ['ak-editor-content-area', 'tinymce-editor', 'fabric-editor', 'ProseMirror'];
     const EDITOR = [
         '[contenteditable=""]',
@@ -34,6 +38,8 @@
     const PROTECTED = '.notranslate[translate="no"]';
 
     const changes = new WeakMap();
+    const observed = new WeakSet();
+    const captured = new WeakMap();
 
     function mark(element) {
         const saved = changes.get(element) ?? { classAdded: false, translate: undefined };
@@ -61,15 +67,34 @@
     }
 
     function scan(root) {
-        update(root);
+        if (root.nodeType === Node.ELEMENT_NODE) update(root);
         for (const element of root.querySelectorAll(`${CONTENT}, ${EDITOR}, .notranslate, [translate]`)) update(element);
+        if (root.nodeType === Node.ELEMENT_NODE) discover(root);
+        // Shadow DOM은 일반 자손 검색에 포함되지 않아 추가된 부분에서 호스트도 찾습니다.
+        for (const element of root.querySelectorAll('*')) discover(element);
+    }
+
+    function discover(element) {
+        const shadow = element.shadowRoot ?? captured.get(element);
+        if (shadow) {
+            if (observed.has(shadow)) scan(shadow);
+            else observe(shadow);
+        }
+    }
+
+    function closestEditor(element) {
+        for (let current = element; current; current = current.getRootNode().host) {
+            const editor = current.closest(EDITOR);
+            if (editor) return editor;
+        }
+        return null;
     }
 
     let repairs = new WeakMap();
     let resetPending = false;
 
     function update(element) {
-        const editor = element.closest(EDITOR);
+        const editor = closestEditor(element);
         if (editor ? editor !== element : !element.matches(CONTENT)) {
             restore(element);
             return;
@@ -99,7 +124,7 @@
         return EDITOR_CLASSES.some(name => oldClasses.has(name) !== mutation.target.classList.contains(name));
     }
 
-    new MutationObserver((mutations) => {
+    function handleMutations(mutations) {
         const roots = new Set();
         for (const mutation of mutations) {
             if (mutation.type === 'attributes') {
@@ -128,7 +153,36 @@
             }
             if (!covered) scan(root);
         }
-    }).observe(document, { childList: true, subtree: true, attributes: true, attributeOldValue: true, attributeFilter: ['class', 'translate', 'contenteditable', 'data-testid', 'data-code-block', 'data-translation-exclude'] });
+    }
 
-    if (document.documentElement) scan(document.documentElement);
+    function observe(root) {
+        if (observed.has(root)) return;
+        observed.add(root);
+        // 루트별 observer를 사용해 제거된 Shadow DOM을 전역 observer에 붙잡아 두지 않습니다.
+        new MutationObserver(handleMutations).observe(root, {
+            childList: true, subtree: true, attributes: true, attributeOldValue: true,
+            attributeFilter: ['class', 'translate', 'contenteditable', 'data-testid', 'data-code-block', 'data-translation-exclude'],
+        });
+        scan(root);
+    }
+
+    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'attachShadow');
+    if (descriptor && (descriptor.writable || descriptor.configurable)) {
+        Object.defineProperty(Element.prototype, 'attachShadow', {
+            ...descriptor,
+            value: function attachShadow(...args) {
+                const root = Reflect.apply(descriptor.value, this, args);
+                // mode를 바꾸지 않고 새 closed root의 반환값도 추적합니다.
+                captured.set(this, root);
+                observe(root);
+                return root;
+            },
+        });
+    }
+
+    observe(document);
+    if (document.readyState === 'loading') {
+        // 파서가 생성한 declarative open Shadow DOM도 로드 종료 시 한 번 수집합니다.
+        document.addEventListener('DOMContentLoaded', () => scan(document), { once: true });
+    }
 })();
