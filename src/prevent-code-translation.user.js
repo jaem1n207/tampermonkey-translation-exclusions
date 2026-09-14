@@ -8,6 +8,7 @@
 // @run-at       document-start
 // @grant        none
 // @homepageURL  https://github.com/jaem1n207/tampermonkey-translation-exclusions
+// @supportURL   https://github.com/jaem1n207/tampermonkey-translation-exclusions/issues
 // @updateURL    https://jaem1n207.github.io/tampermonkey-translation-exclusions/prevent-code-translation.meta.js
 // @downloadURL  https://jaem1n207.github.io/tampermonkey-translation-exclusions/prevent-code-translation.user.js
 // ==/UserScript==
