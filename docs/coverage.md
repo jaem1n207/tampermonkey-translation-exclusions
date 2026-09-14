@@ -40,8 +40,8 @@ The `attachShadow` wrapper must run in the page's JavaScript realm. Combinations
 
 ## Validation evidence
 
-- Node.js 24: 11 unit checks covering release versions, metadata, hashes, rollback prevention, and related deployment behavior.
-- Isolated Chromium 153: 30 browser checks using real DOM and MutationObserver behavior. These cover attribute repair, element reuse, editor transitions, initial parsing, Shadow DOM, frame reloads, loop limits, unnecessary ancestor traversal, and positive/negative installation-page checks.
+- Node.js 24: 18 unit checks covering release versions, localized metadata, hashes, rollback prevention, locale completeness, safe rendering, and generated publication files.
+- Isolated Chromium 153: 50 browser checks using real DOM and MutationObserver behavior. These cover attribute repair, element reuse, editor transitions, initial parsing, Shadow DOM, frame reloads, loop limits, unnecessary ancestor traversal, and positive/negative installation-page checks in all seven languages. They also cover responsive layouts at 320, 768, and 1,280 pixels, language navigation, the illustrative demo, version-fetch failure, and navigation without JavaScript.
 - The previous regression harness's 16 ordinary-DOM checks also passed against the implementation. It uses native DOM and MutationObserver, with timer and frame waits replaced by controlled queues.
 - CI runs the same `npm test` and blocks deployment on failure.
 - The installation check page does not add exclusion attributes itself. A negative control confirms that protection checks fail without the userscript.

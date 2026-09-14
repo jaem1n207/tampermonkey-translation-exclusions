@@ -4,7 +4,7 @@
 
 웹페이지 전체 번역에서 코드·수식·편집기를 제외해 원문을 유지하도록 돕는 Tampermonkey 스크립트입니다.
 
-**[설치 / 업데이트](https://jaem1n207.github.io/tampermonkey-translation-exclusions/)** · [Greasy Fork](https://greasyfork.org/en/scripts/595754-prevent-code-translation) · [설치 동작 확인](https://jaem1n207.github.io/tampermonkey-translation-exclusions/verify.html)
+**[설치 / 업데이트](https://jaem1n207.github.io/tampermonkey-translation-exclusions/ko/)** · [Greasy Fork](https://greasyfork.org/ko/scripts/595754-prevent-code-translation) · [설치 동작 확인](https://jaem1n207.github.io/tampermonkey-translation-exclusions/ko/verify.html)
 
 ## 사용 방법
 
