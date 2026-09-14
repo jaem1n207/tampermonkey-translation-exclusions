@@ -1,68 +1,68 @@
-# 동적 콘텐츠 대응 범위
+# Dynamic content coverage
 
-2026-09-14 기준 구현과 검증 기록입니다. `src/prevent-code-translation.user.js`가 유지보수 대상이며, 설치는 README의 GitHub Pages 링크를 사용합니다. 소스의 `0.0.0`은 자동 빌드용 버전입니다.
+Implementation and validation record as of September 14, 2026. The maintained source is `src/prevent-code-translation.user.js`; use the GitHub Pages link in the README to install. The source version `0.0.0` is a build placeholder.
 
-## 처리하는 상황
+## Supported situations
 
-| 상황 | 처리 방법과 조건 |
+| Situation | Handling and conditions |
 | --- | --- |
-| 무한 스크롤·더보기·lazy-load·SPA 콘텐츠 교체 | 이벤트 자체 대신 추가된 DOM을 감시합니다. 같은 배치의 부모·자식은 중복 탐색하지 않습니다. `body` 전체 교체도 감시 대상입니다. |
-| 숨겨진 콘텐츠 표시, 빈 코드에 텍스트 입력 | 이미 존재하는 대상은 초기 탐색에서 보호합니다. 텍스트만 바뀌면 속성을 다시 쓸 필요가 없습니다. |
-| 보호 속성 삭제, 가상 목록의 코드 재사용 | `class`·`translate` 변경을 감지해 복구합니다. 일반 문장으로 재사용되면 직접 붙인 속성만 되돌립니다. |
-| `div/span` 코드 블록 | `.code-block`, `.hljs`, `[data-code-block]`, `[data-translation-exclude]`처럼 명확한 표식을 사용합니다. 단순 `.highlight`·`.language-en`은 일반 문장과 혼동하므로 사용하지 않습니다. |
-| 키 입력·출력·변수·수식 | `kbd`, `samp`, `var`, `math`, `.katex`, `mjx-container`, `.MathJax`를 보호합니다. |
-| 편집기와 뒤늦은 편집 모드 전환 | `contenteditable`의 빈 값·true·plaintext-only, ProseMirror 및 기존 Jira/Confluence 계열 표식으로 루트를 보호합니다. 자식에는 새 속성을 쓰지 않고 직접 붙였던 값만 정리합니다. 편집기 표식이 제거되면 내부 코드를 다시 보호합니다. |
-| 코드 자손의 `translate="yes"` | 코드 안에서는 보호하고, 밖으로 이동하면 이전 값을 복구합니다. 편집기 내부는 이 처리에서 제외합니다. |
-| 기존·중첩 open Shadow DOM | 초기 탐색과 새로 추가된 호스트에서 루트를 찾아 각각 감시합니다. 파서가 만든 선언형 open 루트는 DOMContentLoaded에도 한 번 확인합니다. |
-| 실행 후 `attachShadow()`로 만든 open/closed 루트 | 반환된 루트를 감시합니다. `mode`, 반환값, 네이티브 오류 동작은 보존합니다. 연결 전 생성된 호스트와 Shadow DOM을 가로지르는 편집기 경계도 처리합니다. |
-| 같은 출처 iframe·srcdoc·about:blank | 내부 문서를 별도로 감시하고 `load`마다 새 문서에 연결합니다. 중첩 프레임과 내부 Shadow DOM도 처리합니다. |
-| 초기 실행 순서 | `document-start`에서 `document`를 감시하므로 `body` 생성 전에도 실행됩니다. 임의의 100ms 지연이나 requestAnimationFrame을 사용하지 않습니다. |
+| Infinite scrolling, “load more,” lazy loading, SPA content replacement | Watches added DOM nodes rather than individual UI events. Parent and child additions in the same batch are scanned without duplicate traversal. Replacing the entire `body` is also covered. |
+| Revealing hidden content or adding text to empty code elements | Existing targets are protected during the initial scan. Text-only changes do not require rewriting attributes. |
+| Removed protection attributes or code elements reused by virtual lists | Repairs changes to `class` and `translate`. When an element becomes ordinary text, restores only attributes owned by this script. |
+| Code blocks built from `div` or `span` | Uses explicit markers such as `.code-block`, `.hljs`, `[data-code-block]`, and `[data-translation-exclude]`. Broad markers such as `.highlight` or `.language-en` are excluded because they can also identify prose. |
+| Keyboard input, sample output, variables, and math | Protects `kbd`, `samp`, `var`, `math`, `.katex`, `mjx-container`, and `.MathJax`. |
+| Editors and elements that become editable later | Protects roots with empty, true, or plaintext-only `contenteditable` values, ProseMirror, and the supported Jira/Confluence editor markers. Leaves descendants untouched except to undo its own earlier changes. Protects code inside again when the editor marker is removed. |
+| Code descendants with `translate="yes"` | Protects them while inside code and restores their previous values when they move outside. Editor descendants are excluded from this handling. |
+| Existing and nested open Shadow DOM | Discovers roots during the initial scan and when hosts are added, then observes each root. Checks once more at DOMContentLoaded for parser-created declarative open roots. |
+| Open or closed roots created by `attachShadow()` after the script starts | Observes the returned root while preserving its mode, return value, and native error behavior. Handles hosts created before attachment and editor boundaries across shadow roots. |
+| Same-origin iframes, srcdoc, and about:blank | Observes each document separately and reconnects after each `load`. Includes nested frames and their Shadow DOM. |
+| Early execution | Observes `document` at `document-start`, even before `body` exists. Uses neither an arbitrary 100 ms delay nor requestAnimationFrame. |
 
-## 직접 지정할 수 있는 대상
+## Custom targets
 
-표식 없는 사용자명·해시태그·식별자는 일반 문장과 구분할 근거가 없습니다. 사이트에 맞는 **구체적인 선택자**를 `CONTENT` 목록에 추가하거나, 해당 요소에 `data-translation-exclude`를 지정하세요. 모든 `span`이나 댓글 전체를 선택하면 일반 문장도 번역에서 빠집니다.
+Unmarked usernames, hashtags, and identifiers cannot reliably be distinguished from prose. Add a **specific selector** for the site to `CONTENT`, or mark the element with `data-translation-exclude`. Selecting every `span` or an entire comment also excludes its prose from translation.
 
-새로운 속성이나 클래스로 대상 여부를 동적으로 판정하려면 `observe()`의 `attributeFilter`와 `boundaryChanged()`의 경계 판정도 함께 수정해야 합니다. 기본 제공 `data-translation-exclude`와 `data-code-block`은 추가·삭제를 이미 감시합니다. 식별용 `data-notranslate-processed`는 더 이상 필요하지 않습니다.
+If targeting depends on a new attribute or class changing dynamically, update both `observe()`'s `attributeFilter` and the boundary checks in `boundaryChanged()`. Additions and removals of the built-in `data-translation-exclude` and `data-code-block` markers are already observed. The old `data-notranslate-processed` marker is no longer needed.
 
-## 남는 한계와 가능한 대처
+## Limitations and workarounds
 
-| 한계 | 현재 가능한 대처 |
+| Limitation | Available workaround |
 | --- | --- |
-| 스크립트 실행 전에 생성된 closed Shadow DOM | 밖에서 내부를 찾을 표준 API가 없습니다. 가능한 한 `document-start`로 일찍 실행합니다. 새 closed 루트도 현재 래퍼를 통해 생성된 경우에만 추적됩니다. |
-| 페이지가 attachShadow를 동결·교체하거나 저장해 둔 원본을 직접 호출 | 변경 가능한 API만 감쌉니다. 기존 open 루트 탐색은 유지되지만, 이미 연결된 호스트에 조용히 생긴 새 루트는 놓칠 수 있습니다. 동적 선언형 루트도 일반 DOM 알림이나 초기 수집에 잡히는 경우에 한합니다. |
-| 다른 출처·opaque sandbox iframe | 부모에서는 접근하지 않습니다. HTTP(S) URL이 매칭되고 Tampermonkey 실행 권한이 있는 프레임에서는 스크립트가 별도로 실행될 수 있습니다. 모든 sandbox 프레임을 보장하지 않습니다. |
-| 사이트가 속성을 지속적으로 제거 | 같은 이벤트 루프 구간에서 요소당 최대 3번 복구 후 멈춰 무한 microtask 루프를 방지합니다. 계속 충돌하는 사이트에서는 보호가 풀릴 수 있으므로 해당 사이트 코드/번역기 설정 조정이 필요합니다. 백그라운드 재시도 폴링은 하지 않습니다. |
-| 번역기가 먼저 원문을 수집하거나 제외 속성을 무시 | 일찍 실행하고 속성을 복구하지만 확장 간 순서를 통제하지는 못합니다. 사이트를 새로고침하고 번역기별 제외 설정을 사용하세요. 이미 번역된 원문을 복원하지 않습니다. |
-| 편집기 내부의 명시적인 translate=yes 또는 비표준 편집기 | 루트의 제외 속성을 따르는 번역기에서 보호됩니다. 내부 스키마를 임의로 수정하지 않으므로 중첩 허용 속성까지 강제 차단하지 않습니다. 번역기의 편집 영역/사이트 제외 설정을 이용할 수 있습니다. |
-| OCR·캔버스·이미지·데스크톱 앱으로 복사한 일반 텍스트 | HTML 제외 속성이 전달되지 않습니다. 각 도구의 제외 설정이나 원문 유지 기능이 필요합니다. |
+| Closed Shadow DOM created before the script runs | No standard API can retrieve these roots from outside. Run as early as possible with `document-start`. New closed roots are tracked only if created through the installed wrapper. |
+| A page freezes or replaces attachShadow, or calls a previously saved original | Wraps the API only when it can be changed. Existing open roots can still be discovered, but a new root silently attached to an existing host may be missed. Dynamic declarative roots must also be discoverable through ordinary DOM notifications or the initial scans. |
+| Cross-origin or opaque sandboxed iframes | The parent cannot access them. Tampermonkey may run the script independently in frames with matching HTTP(S) URLs and execution permission. This does not cover every sandbox configuration. |
+| A site repeatedly removes protection attributes | Repairs an element at most three times in the same event-loop interval to avoid an infinite microtask loop. Continued conflicts can leave it unprotected; adjust the site's behavior or translator settings. There is no background retry polling. |
+| A translator captures text first or ignores exclusion attributes | Early execution and attribute repair cannot control the order of extensions. Reload the page and use the translator's exclusion settings. The script does not restore text already translated. |
+| Explicit translate=yes inside an editor, or an unsupported editor | Protection depends on the translator honoring the root's exclusion attributes. The script does not modify the editor's internal schema to override nested translation permissions. Use the translator's editor or site exclusion settings when available. |
+| OCR, canvas, images, or plain text copied into a desktop app | HTML exclusion attributes do not carry over. Use the tool's exclusion settings or an option to preserve the original text. |
 
-`attachShadow` 래퍼는 페이지와 같은 JavaScript 실행 환경에서 작동해야 합니다. Tampermonkey 실행 환경이나 다른 확장이 API를 변경하는 조합까지 통합 검증한 것은 아닙니다. 이 스크립트는 번역기를 대체하거나 웹사이트의 자체 언어 전환을 취소하지 않습니다.
+The `attachShadow` wrapper must run in the page's JavaScript realm. Combinations of Tampermonkey execution environments and other extensions modifying the API have not been integration-tested. This script neither replaces a translator nor reverses a website's own language switch.
 
-## 검증 근거
+## Validation evidence
 
-- Node.js 24: 배포 버전·메타데이터·해시·롤백 방지 등 11개 단위 검사.
-- 격리된 Chromium 153: 실제 DOM·MutationObserver로 30개 브라우저 검사. 속성 복구, 요소 재사용, 편집 모드 전환, 초기 파싱, Shadow DOM, 프레임 재로딩, 무한 루프 제한, 불필요한 조상 탐색, 설치 검사 페이지의 성공/실패 대조를 포함합니다.
-- 기존 회귀 하네스의 일반 DOM 16개 검사도 현재 구현에서 통과했습니다. 네이티브 DOM·MutationObserver를 사용하되 하네스의 타이머·프레임 대기는 제어된 큐입니다.
-- CI는 같은 `npm test`를 실행하며 실패하면 배포하지 않습니다.
-- 설치 확인 페이지는 제외 속성을 스스로 붙이지 않습니다. 스크립트 없이 실행했을 때 보호 검사가 실패하는 대조 검사도 포함합니다.
+- Node.js 24: 11 unit checks covering release versions, metadata, hashes, rollback prevention, and related deployment behavior.
+- Isolated Chromium 153: 30 browser checks using real DOM and MutationObserver behavior. These cover attribute repair, element reuse, editor transitions, initial parsing, Shadow DOM, frame reloads, loop limits, unnecessary ancestor traversal, and positive/negative installation-page checks.
+- The previous regression harness's 16 ordinary-DOM checks also passed against the implementation. It uses native DOM and MutationObserver, with timer and frame waits replaced by controlled queues.
+- CI runs the same `npm test` and blocks deployment on failure.
+- The installation check page does not add exclusion attributes itself. A negative control confirms that protection checks fail without the userscript.
 
-실제 X/Twitter·Instagram·Jira·Confluence나 DeepL·Google 번역 확장 조합에서의 통합 시험은 아닙니다. 동일한 DOM 변경 패턴을 재현한 결과와 실제 서비스 호환성은 구분해야 합니다.
+These are not integration tests on X/Twitter, Instagram, Jira, Confluence, or combinations of DeepL and Google Translate extensions. Reproducing their DOM update patterns does not establish compatibility with those services.
 
-## 성능 측정
+## Performance measurements
 
-원본 v0.2와 확장된 구현 `596a3f7`을 같은 Chromium 153에서 비교했습니다. 예열 2회 후 9회 측정의 중앙값이며, 실행 순서는 교대했습니다. 타이머 대기·DOM 입력 생성·결과 검사는 제외한 콜백 경과 시간 합입니다. OS CPU 사용 시간이나 웹페이지 전체 체감 속도가 아닙니다.
+The original v0.2 and the expanded implementation at `596a3f7` were compared in the same Chromium 153 environment. Results are medians of nine measured runs after two warm-ups, with alternating execution order. Times sum elapsed callback execution, excluding timer waits, fixture creation, and result assertions. They are not OS CPU time or overall page responsiveness.
 
-| 합성 입력 | 원본 | 확장된 구현 |
+| Synthetic input | Original | Expanded implementation |
 | --- | ---: | ---: |
-| 한 영역에 코드 블록 2,000개 | 3.6 ms | 9.1 ms |
-| 형제 영역 2,000개 개별 추가 | 6.8 ms | 12.0 ms |
-| 깊이 80의 중첩 영역, 코드 블록 320개 | 28.7 ms | 3.4 ms |
-| 코드 없는 형제 영역 2,000개 | 2.6 ms | 1.7 ms |
+| 2,000 code blocks in one container | 3.6 ms | 9.1 ms |
+| 2,000 sibling containers added separately | 6.8 ms | 12.0 ms |
+| 320 code blocks in containers nested 80 levels deep | 28.7 ms | 3.4 ms |
+| 2,000 sibling containers without code | 2.6 ms | 1.7 ms |
 
-지원 범위를 늘리면서 단순 코드 대량 추가의 감시 비용은 증가했습니다. 중복 탐색이 많은 입력은 약 8.4배 빨랐지만, 모든 페이지에서 더 빠르다는 의미는 아닙니다. 이전 v0.3 보고서의 44.2배는 다른 버전·실행의 수치입니다.
+Broader coverage increased observation overhead for simple bulk code additions. The fixture with substantial duplicate traversal was about 8.4 times faster; that does not mean every page is faster. The earlier v0.3 report's 44.2-times result came from a different version and run.
 
-이번 최적화는 대량 추가 시 자체 속성 알림의 조상 재탐색을 제거합니다. 100개의 pre/code 쌍을 추가하는 회귀 검사에서 조상 탐색은 1,001회에서 200회 이하로 줄었고, 모든 대상의 보호도 확인합니다. 일반 테마 클래스 변경에는 하위 트리 검색이 없으며, 코드 없는 잎 요소 2,000개 추가에는 querySelectorAll과 closest 호출이 없습니다. 기능 추가 비용을 숨기기 위해 미처리 대상을 성능 향상으로 세지 않았습니다.
+The optimization removes repeated ancestor traversal caused by the script's own attribute changes during bulk additions. In a regression check adding 100 pre/code pairs, ancestor traversals fell from 1,001 to at most 200 while every target remained protected. Ordinary theme-class changes do not scan subtrees, and adding 2,000 leaf elements without code makes no querySelectorAll or closest calls. Unprocessed targets are not counted as performance improvements.
 
-[측정 JSON](generated/benchmark-2026-09-14.json) · [재실행 가능한 HTML 스냅샷](generated/benchmark-2026-09-14.html). HTML은 해당 커밋의 원본·수정본과 하네스를 포함한 생성 결과이며 설치 파일이 아닙니다. 다운로드해 브라우저에서 열면 일반 DOM 회귀 검사와 합성 벤치마크를 재실행할 수 있습니다. 최신 동작 검사는 저장소의 `npm test`를 사용하세요.
+[Measurement JSON](generated/benchmark-2026-09-14.json) · [Runnable HTML snapshot](generated/benchmark-2026-09-14.html). The HTML contains the original and modified scripts plus the harness for that revision; it is not an installer. Download it and open it in a browser to rerun the ordinary-DOM regressions and synthetic benchmarks. Use the repository's `npm test` for current behavior checks.
 
-참고: [Tampermonkey 메타데이터](https://www.tampermonkey.net/documentation.php), [HTML translate](https://html.spec.whatwg.org/multipage/dom.html#the-translate-attribute), [DOM attachShadow](https://dom.spec.whatwg.org/#dom-element-attachshadow).
+References: [Tampermonkey metadata](https://www.tampermonkey.net/documentation.php), [HTML translate](https://html.spec.whatwg.org/multipage/dom.html#the-translate-attribute), [DOM attachShadow](https://dom.spec.whatwg.org/#dom-element-attachshadow).

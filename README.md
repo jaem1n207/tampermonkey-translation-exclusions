@@ -18,6 +18,6 @@ A Tampermonkey userscript that helps keep code, math, and editors untranslated d
 - Supported content added by infinite scrolling, “load more,” or lazy loading, with repair of removed translation exclusion attributes.
 - Accessible Shadow DOM and same-origin iframes.
 
-The script cannot infer what unmarked plain text means. Translators may ignore exclusion markers, and text that has already been translated cannot be restored. See [detailed coverage and limitations (Korean)](docs/coverage.md).
+The script cannot infer what unmarked plain text means. Translators may ignore exclusion markers, and text that has already been translated cannot be restored. See [detailed coverage and limitations](docs/coverage.md).
 
 Report bugs or suggest improvements through [Issues](https://github.com/jaem1n207/tampermonkey-translation-exclusions/issues). External pull requests are not accepted.

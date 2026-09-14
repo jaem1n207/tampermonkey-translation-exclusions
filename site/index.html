@@ -12,7 +12,7 @@ body{font:16px/1.7 system-ui,sans-serif;max-width:720px;margin:64px auto;padding
 <p id="version">Checking the current version…</p>
 <p>Once installed, Tampermonkey checks for updates on your configured schedule. Reload open pages after an update.</p>
 <p><a href="./verify.html">Check installation</a> · <a href="https://github.com/jaem1n207/tampermonkey-translation-exclusions">Source and instructions</a></p>
-<p class="note">Supports dynamic content, attribute repair, accessible Shadow DOM, and same-origin iframes. Translators may ignore exclusion markers. <a href="https://github.com/jaem1n207/tampermonkey-translation-exclusions/blob/main/docs/coverage.md">Coverage and limitations (Korean)</a></p>
+<p class="note">Supports dynamic content, attribute repair, accessible Shadow DOM, and same-origin iframes. Translators may ignore exclusion markers. <a href="https://github.com/jaem1n207/tampermonkey-translation-exclusions/blob/main/docs/coverage.md">Coverage and limitations</a></p>
 <script>
 fetch('./manifest.json', {cache: 'no-store'}).then(response => {
     if (!response.ok) throw new Error('Could not fetch release information');
