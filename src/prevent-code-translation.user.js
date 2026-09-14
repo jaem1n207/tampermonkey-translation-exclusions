@@ -27,7 +27,12 @@
     ].join(',');
     // 별도 처리 표시 대신 실제 속성으로 중복 작업을 거릅니다.
     // 사이트별 추가 대상은 이 목록에 명확한 셀렉터로 지정합니다.
-    const CONTENT = 'pre, code, div.code-block, span.code-block, div.hljs, span.hljs, [data-code-block], [data-translation-exclude]';
+    const CONTENT = [
+        'pre', 'code', 'kbd', 'samp', 'var', 'math',
+        'div.code-block', 'span.code-block', 'div.hljs', 'span.hljs',
+        '[data-code-block]', '[data-translation-exclude]',
+        '.katex', 'mjx-container', '.MathJax',
+    ].join(',');
     const TARGET = `:is(${CONTENT}):not(.notranslate[translate="no"])`;
 
     const changes = new WeakMap();

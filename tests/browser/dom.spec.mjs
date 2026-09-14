@@ -139,3 +139,10 @@ test('moving protected code into an editor releases only script-owned flags', as
     await expect(page.locator('#code')).not.toHaveAttribute('translate');
     await expect(page.locator('#code')).not.toHaveClass(/notranslate/);
 });
+
+
+test('semantic symbols, keyboard keys and math renderers retain their original notation', async ({ page }) => {
+    await install(page, '<kbd id="keys">Ctrl+C</kbd><samp id="output">ENOENT</samp><var id="variable">x</var><math id="math"><mi>x</mi></math><span class="katex" id="katex">f(x)</span><mjx-container id="mathjax">x+y</mjx-container><p id="ordinary">An ordinary sentence with x and Ctrl+C.</p>');
+    for (const id of ['keys', 'output', 'variable', 'math', 'katex', 'mathjax']) await protectedElement(page.locator(`#${id}`));
+    await expect(page.locator('#ordinary')).not.toHaveAttribute('translate');
+});
