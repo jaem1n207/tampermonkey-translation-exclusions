@@ -12,7 +12,7 @@ test('installation check page passes initial and expanded dynamic checks with th
     await page.addInitScript(script => { if (window === window.top) (0, eval)(script); }, source);
     await openFixture(page);
     await expect(page.locator('#results .pass')).toHaveCount(6);
-    await page.getByRole('button', { name: '더보기 · 동적 코드 추가' }).click();
+    await page.getByRole('button', { name: 'Load more · add dynamic code' }).click();
     await expect(page.locator('#results .pass')).toHaveCount(9);
     await expect(page.locator('#results .fail')).toHaveCount(0);
 });
@@ -20,7 +20,7 @@ test('installation check page passes initial and expanded dynamic checks with th
 test('installation check page does not protect its own fixtures when the userscript is absent', async ({ page }) => {
     await openFixture(page);
     await expect(page.locator('#results .fail')).toHaveCount(4);
-    await page.getByRole('button', { name: '더보기 · 동적 코드 추가' }).click();
+    await page.getByRole('button', { name: 'Load more · add dynamic code' }).click();
     await expect(page.locator('#results .fail')).toHaveCount(7);
     await expect(page.locator('#initial-code')).not.toHaveAttribute('translate');
 });
