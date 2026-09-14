@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      0.0.0
 // @description  에디터 밖의 pre, code 태그에 번역 방지 속성을 추가합니다.
-// @author       Bendd
+// @author       이재민
 // @match        *://*/*
 // @run-at       document-end
 // @grant        none
