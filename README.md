@@ -4,12 +4,12 @@ English | [한국어](README.ko.md)
 
 A Tampermonkey userscript that helps keep code, math, and editors untranslated during full-page translation.
 
-**[Install / update](https://jaem1n207.github.io/tampermonkey-translation-exclusions/)** · [Check installation](https://jaem1n207.github.io/tampermonkey-translation-exclusions/verify.html)
+**[Install / update](https://jaem1n207.github.io/tampermonkey-translation-exclusions/)** · [Greasy Fork](https://greasyfork.org/en/scripts/595754-prevent-code-translation) · [Check installation](https://jaem1n207.github.io/tampermonkey-translation-exclusions/verify.html)
 
 ## Getting started
 
 1. Open the install link in a browser with Tampermonkey. If already installed, use **Check for updates** on its existing Tampermonkey entry before installing another copy.
-2. Enable automatic update checks in Tampermonkey. New versions arrive on your configured schedule.
+2. Enable automatic update checks in Tampermonkey. New versions arrive from your installation source on your configured schedule.
 3. Reload the pages you want to use after installing or updating. Use the installation check page if protection seems to be missing.
 
 ## Coverage
