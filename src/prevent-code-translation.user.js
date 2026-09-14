@@ -30,29 +30,47 @@
     const CONTENT = 'pre, code, div.code-block, span.code-block, div.hljs, span.hljs, [data-code-block], [data-translation-exclude]';
     const TARGET = `:is(${CONTENT}):not(.notranslate[translate="no"])`;
 
+    const changes = new WeakMap();
+
     function mark(element) {
+        const saved = changes.get(element) ?? { classAdded: false, translate: undefined };
+        changes.set(element, saved);
         if (!element.classList.contains('notranslate')) {
+            saved.classAdded = true;
             element.classList.add('notranslate');
         }
         if (element.getAttribute('translate') !== 'no') {
+            if (saved.translate === undefined) saved.translate = element.getAttribute('translate');
             element.setAttribute('translate', 'no');
         }
     }
 
-    function scan(root) {
-        if (root.closest(EDITOR)) return;
-
-        if (root.matches(TARGET)) mark(root);
-        for (const element of root.querySelectorAll(TARGET)) {
-            if (!element.closest(EDITOR)) mark(element);
+    function restore(element) {
+        const saved = changes.get(element);
+        if (!saved) return;
+        changes.delete(element);
+        // 용도가 바뀌면 직접 추가한 값만 되돌리고 사이트의 기존 값은 보존합니다.
+        if (saved.classAdded) element.classList.remove('notranslate');
+        if (saved.translate !== undefined && element.getAttribute('translate') === 'no') {
+            if (saved.translate === null) element.removeAttribute('translate');
+            else element.setAttribute('translate', saved.translate);
         }
+    }
+
+    function scan(root) {
+        update(root);
+        for (const element of root.querySelectorAll(`${CONTENT}, .notranslate, [translate]`)) update(element);
     }
 
     let repairs = new WeakMap();
     let resetPending = false;
 
-    function repair(element) {
-        if (!element.matches(TARGET) || element.closest(EDITOR)) return;
+    function update(element) {
+        if (!element.matches(CONTENT) || element.closest(EDITOR)) {
+            restore(element);
+            return;
+        }
+        if (!element.matches(TARGET)) return;
         const count = repairs.get(element) ?? 0;
         // 페이지가 같은 속성을 계속 지워도 microtask 루프로 화면을 멈추지 않습니다.
         if (count >= 3) return;
@@ -68,7 +86,7 @@
         const roots = new Set();
         for (const mutation of mutations) {
             if (mutation.type === 'attributes') {
-                if (mutation.target.isConnected) repair(mutation.target);
+                if (mutation.target.isConnected) update(mutation.target);
                 continue;
             }
             for (const node of mutation.addedNodes) {

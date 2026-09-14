@@ -113,3 +113,29 @@ test('code markers added after insertion trigger protection', async ({ page }) =
     await protectedElement(page.locator('#class'));
     await protectedElement(page.locator('#data'));
 });
+
+
+test('a recycled code container restores its original translation setting', async ({ page }) => {
+    await install(page, '<div class="code-block" id="reused" translate="yes">x()</div>');
+    await protectedElement(page.locator('#reused'));
+    await page.evaluate(() => {
+        const node = document.getElementById('reused');
+        node.classList.remove('code-block');
+        node.textContent = 'Ordinary prose after recycling';
+    });
+    await expect(page.locator('#reused')).toHaveAttribute('translate', 'yes');
+    await expect(page.locator('#reused')).not.toHaveClass(/notranslate/);
+});
+
+test('recycling preserves translation flags originally supplied by the site', async ({ page }) => {
+    await install(page, '<div class="code-block notranslate" translate="no" id="owned">x()</div>');
+    await page.evaluate(() => document.getElementById('owned').classList.remove('code-block'));
+    await protectedElement(page.locator('#owned'));
+});
+
+test('moving protected code into an editor releases only script-owned flags', async ({ page }) => {
+    await install(page, '<code id="code">x()</code><div contenteditable id="editor"></div>');
+    await page.evaluate(() => document.getElementById('editor').append(document.getElementById('code')));
+    await expect(page.locator('#code')).not.toHaveAttribute('translate');
+    await expect(page.locator('#code')).not.toHaveClass(/notranslate/);
+});
