@@ -163,19 +163,19 @@ test('invalid saved or URL languages are ignored, and navigator.language covers 
     await expect(page.locator('html')).toHaveAttribute('lang', 'ko');
 });
 
-async function pauseDemoAnimations(page) {
-    await page.addInitScript(() => {
+async function pauseAnimations(page, selector = '#demo-prose span') {
+    await page.addInitScript(selector => {
         const animate = Element.prototype.animate;
         Element.prototype.animate = function (...args) {
             const animation = animate.apply(this, args);
-            if (this.matches('#demo-prose span')) animation.pause();
+            if (this.matches(selector)) animation.pause();
             return animation;
         };
-    });
+    }, selector);
 }
 
 test('demo pointer transition fades only the sentence and keeps the code fixed', async ({ page }) => {
-    await pauseDemoAnimations(page);
+    await pauseAnimations(page);
     await serve(page);
     await page.goto('https://fixture.test/ko/');
     const codeBefore = await page.locator('.example-code').boundingBox();
@@ -199,7 +199,7 @@ test('demo pointer transition fades only the sentence and keeps the code fixed',
 
 
 test('rapid demo reversal resumes from the visible opacity and finishes on the last choice', async ({ page }) => {
-    await pauseDemoAnimations(page);
+    await pauseAnimations(page);
     await serve(page);
     await page.goto('https://fixture.test/ko/');
     const prose = page.locator('#demo-prose');
@@ -221,7 +221,7 @@ test('rapid demo reversal resumes from the visible opacity and finishes on the l
 });
 
 test('keyboard demo selection is immediate and cancels an unfinished pointer transition', async ({ page }) => {
-    await pauseDemoAnimations(page);
+    await pauseAnimations(page);
     await serve(page);
     await page.goto('https://fixture.test/ko/');
     const original = page.locator('[data-demo="original"]');
@@ -237,7 +237,7 @@ test('keyboard demo selection is immediate and cancels an unfinished pointer tra
 });
 
 test('reduced-motion demo uses a gentle fade and changing the preference settles pending motion', async ({ page }) => {
-    await pauseDemoAnimations(page);
+    await pauseAnimations(page);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await serve(page);
     await page.goto('https://fixture.test/ko/');
@@ -273,3 +273,165 @@ test('demo remains usable when the animation API is unavailable', async ({ page 
     await expect(page.locator('#demo-prose')).toHaveText('Find the available products.');
     await expect(page.locator('#demo-prose span')).toHaveCSS('opacity', '1');
 });
+
+
+for (const path of ['ko/', 'ko/verify.html']) {
+    test(`language menu pointer motion preserves navigation and excludes closing links: ${path}`, async ({ page }) => {
+        await pauseAnimations(page, '.languages nav');
+        await serve(page);
+        await page.goto(`https://fixture.test/${path}`);
+        const summary = page.locator('.languages summary');
+        const menu = page.locator('.languages nav');
+        const cdp = await page.context().newCDPSession(page);
+        const labels = await menu.locator('a').allTextContents();
+        // Role locators query DOM semantics; check the browser's actual accessibility tree for inert.
+        const accessibleLinks = async () => {
+            const { nodes } = await cdp.send('Accessibility.getFullAXTree');
+            return nodes.filter(node => !node.ignored && node.role?.value === 'link' && labels.includes(node.name?.value)).length;
+        };
+        await summary.click();
+        const opening = await menu.evaluate(el => el.getAnimations().map(a => ({ duration: a.effect.getTiming().duration, frames: a.effect.getKeyframes() })));
+        expect(opening).toHaveLength(1);
+        expect(opening[0].duration).toBe(180);
+        expect(opening[0].frames.map(frame => frame.transform)).toEqual(['scale(0.98)', 'scale(1)']);
+        expect(opening[0].frames.map(frame => frame.opacity)).toEqual(['0', '1']);
+        await expect(summary).toHaveAttribute('aria-expanded', 'true');
+        expect(await accessibleLinks()).toBe(7);
+        await menu.evaluate(el => el.getAnimations()[0].finish());
+        await expect.poll(() => menu.evaluate(el => el.getAnimations().length)).toBe(0);
+        await summary.click();
+        await expect(summary).toHaveAttribute('aria-expanded', 'false');
+        await expect(menu).toHaveAttribute('inert', '');
+        expect(await accessibleLinks()).toBe(0);
+        await menu.locator('a').first().evaluate(el => el.focus());
+        await expect(summary).toBeFocused();
+        const closing = await menu.evaluate(el => el.getAnimations().map(a => ({ duration: a.effect.getTiming().duration, frames: a.effect.getKeyframes() })));
+        expect(closing).toHaveLength(1);
+        expect(closing[0].duration).toBe(150);
+        expect(closing[0].frames.map(frame => frame.opacity)).toEqual(['1', '0']);
+        await menu.evaluate(el => el.getAnimations()[0].finish());
+        await expect(page.locator('.languages')).not.toHaveAttribute('open');
+        await expect(menu).not.toBeVisible();
+    });
+}
+
+
+test('language menu reverses an interrupted opening and closing from the visible state', async ({ page }) => {
+    await pauseAnimations(page, '.languages nav');
+    await serve(page);
+    await page.goto('https://fixture.test/ko/');
+    const menu = page.locator('.languages nav');
+    const summary = page.locator('.languages summary');
+    const midpoint = () => menu.evaluate(el => {
+        el.getAnimations()[0].currentTime = 30;
+        const style = getComputedStyle(el);
+        return { opacity: style.opacity, transform: style.transform };
+    });
+    const firstFrame = () => menu.evaluate(el => {
+        const animations = el.getAnimations();
+        const frame = animations[0].effect.getKeyframes()[0];
+        return { count: animations.length, opacity: frame.opacity, transform: frame.transform };
+    });
+    await summary.click();
+    const opening = await midpoint();
+    await page.locator('h1').click();
+    expect(await firstFrame()).toEqual({ count: 1, ...opening });
+    const closing = await midpoint();
+    await summary.click();
+    expect(await firstFrame()).toEqual({ count: 1, ...closing });
+    await expect(menu).not.toHaveAttribute('inert');
+    await menu.evaluate(el => el.getAnimations()[0].finish());
+    await expect.poll(() => menu.evaluate(el => el.getAnimations().length)).toBe(0);
+    await expect(summary).toHaveAttribute('aria-expanded', 'true');
+    await expect(menu).toHaveCSS('opacity', '1');
+    await expect(menu).toHaveCSS('transform', 'none');
+    await menu.locator('a[hreflang="ja"]').click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
+});
+
+test('language menu keyboard actions settle immediately and return focus safely', async ({ page }) => {
+    await pauseAnimations(page, '.languages nav');
+    await serve(page);
+    await page.goto('https://fixture.test/ko/');
+    const details = page.locator('.languages');
+    const summary = page.locator('.languages summary');
+    const menu = page.locator('.languages nav');
+    await summary.press('Enter');
+    await expect(menu).toBeVisible();
+    expect(await menu.evaluate(el => el.getAnimations().length)).toBe(0);
+    await summary.press('Tab');
+    await expect(menu.locator('a').first()).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(details).not.toHaveAttribute('open');
+    await expect(summary).toBeFocused();
+    await summary.press('Space');
+    await summary.press('Space');
+    await expect(details).not.toHaveAttribute('open');
+    await summary.click();
+    await summary.press('Tab');
+    expect(await menu.evaluate(el => el.getAnimations().length)).toBe(0);
+    await expect(menu.locator('a').first()).toBeFocused();
+    await page.locator('[data-demo="original"]').click();
+    await expect(page.locator('[data-demo="original"]')).toBeFocused();
+    await expect(menu).toHaveAttribute('inert', '');
+    await summary.press('Tab');
+    await expect(details).not.toHaveAttribute('open');
+    expect(await details.evaluate(el => el.contains(document.activeElement))).toBe(false);
+    await summary.click();
+    await summary.click();
+    await summary.press('Escape');
+    await expect(details).not.toHaveAttribute('open');
+    expect(await menu.evaluate(el => el.getAnimations().length)).toBe(0);
+});
+
+test('reduced-motion language menu fades gently without scaling and settles when preferences change', async ({ page }) => {
+    await pauseAnimations(page, '.languages nav');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await serve(page);
+    await page.goto('https://fixture.test/ko/');
+    const menu = page.locator('.languages nav');
+    const summary = page.locator('.languages summary');
+    await summary.click();
+    const opening = await menu.evaluate(el => {
+        const animation = el.getAnimations()[0];
+        return { duration: animation.effect.getTiming().duration, frames: animation.effect.getKeyframes() };
+    });
+    expect(opening.duration).toBe(80);
+    expect(opening.frames.map(frame => frame.opacity)).toEqual(['0.85', '1']);
+    expect(opening.frames.every(frame => !('transform' in frame))).toBe(true);
+    const opacity = await menu.evaluate(el => {
+        el.getAnimations()[0].currentTime = 20;
+        return getComputedStyle(el).opacity;
+    });
+    await summary.click();
+    const closing = await menu.evaluate(el => ({ duration: el.getAnimations()[0].effect.getTiming().duration, frames: el.getAnimations()[0].effect.getKeyframes() }));
+    expect(closing.duration).toBe(80);
+    expect(closing.frames.map(frame => frame.opacity)).toEqual([opacity, '0.85']);
+    expect(closing.frames.every(frame => !('transform' in frame))).toBe(true);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await expect(page.locator('.languages')).not.toHaveAttribute('open');
+    await summary.click();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect.poll(() => menu.evaluate(el => el.getAnimations().length)).toBe(0);
+    await expect(menu).toBeVisible();
+    await expect(menu).toHaveCSS('transform', 'none');
+});
+
+for (const missing of ['animate', 'inert']) {
+    test(`language navigation works immediately without ${missing} support`, async ({ page }) => {
+        await page.addInitScript(missing => {
+            if (missing === 'animate') Element.prototype.animate = undefined;
+            else delete HTMLElement.prototype.inert;
+        }, missing);
+        await serve(page);
+        await page.goto('https://fixture.test/ko/');
+        const summary = page.locator('.languages summary');
+        await summary.click();
+        expect(await page.locator('.languages nav').evaluate(el => el.getAnimations().length)).toBe(0);
+        await summary.click();
+        await expect(page.locator('.languages')).not.toHaveAttribute('open');
+        await summary.click();
+        await page.locator('.languages a[hreflang="ja"]').click();
+        await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
+    });
+}

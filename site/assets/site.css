@@ -13,3 +13,5 @@
 #demo-prose::before,#demo-prose::after{visibility:hidden;pointer-events:none;user-select:none}
 .demo-switch button{font-weight:650}
 .demo-switch[data-instant] button{transition:none}
+
+.languages nav{transform-origin:top right}

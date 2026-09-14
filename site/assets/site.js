@@ -71,15 +71,66 @@ if (demo) {
 }
 
 const languages = document.querySelector('.languages');
-document.addEventListener('click', event => {
-    if (!languages.contains(event.target)) languages.open = false;
-});
-languages.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && languages.open) {
-        languages.open = false;
-        languages.querySelector('summary').focus();
-    }
-});
+if (languages) {
+    const summary = languages.querySelector('summary');
+    const menu = languages.querySelector('nav');
+    const canAnimate = typeof menu.animate === 'function' && 'inert' in menu;
+    let expanded = languages.open;
+    let animation;
+
+    const settle = () => {
+        if (animation) {
+            animation.onfinish = null;
+            animation.cancel();
+            animation = null;
+        }
+        languages.open = expanded;
+        menu.inert = !expanded;
+        summary.setAttribute('aria-expanded', String(expanded));
+    };
+    const setExpanded = (next, instant) => {
+        if (next === expanded && !instant) return;
+        expanded = next;
+        if (!expanded && menu.contains(document.activeElement)) summary.focus({ preventScroll: true });
+        if (instant || !canAnimate) return settle();
+
+        const style = animation ? getComputedStyle(menu) : null;
+        const from = style
+            ? { opacity: style.opacity, transform: style.transform }
+            : { opacity: expanded ? (reducedMotion.matches ? 0.85 : 0) : 1, transform: expanded ? 'scale(0.98)' : 'scale(1)' };
+        if (animation) {
+            animation.onfinish = null;
+            animation.cancel();
+        }
+        // Keep the exit visible, but remove its links from focus and accessibility immediately.
+        languages.open = true;
+        menu.inert = !expanded;
+        summary.setAttribute('aria-expanded', String(expanded));
+        const frames = reducedMotion.matches
+            ? [{ opacity: from.opacity }, { opacity: expanded ? 1 : 0.85 }]
+            : [from, { opacity: expanded ? 1 : 0, transform: expanded ? 'scale(1)' : 'scale(0.98)' }];
+        animation = menu.animate(frames, { duration: reducedMotion.matches ? 80 : (expanded ? 180 : 150), easing: easeOut, fill: 'both' });
+        animation.onfinish = settle;
+    };
+    settle();
+    reducedMotion.addEventListener('change', settle);
+    summary.addEventListener('click', event => {
+        event.preventDefault();
+        setExpanded(!expanded, event.detail === 0);
+    });
+    document.addEventListener('click', event => {
+        if (!languages.contains(event.target)) setExpanded(false, event.detail === 0);
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && languages.open) {
+            event.preventDefault();
+            setExpanded(false, true);
+            summary.focus({ preventScroll: true });
+        } else if (languages.contains(event.target)) {
+            settle();
+        }
+    });
+}
 
 // Carry a manual choice between pages even if localStorage is blocked.
 const selectedLanguage = new URL(location.href).searchParams.get('lang');
