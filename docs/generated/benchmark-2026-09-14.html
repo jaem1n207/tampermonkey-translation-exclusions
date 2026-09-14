@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><title>코드 번역 방지 검증</title>
+<style>body{font:16px/1.6 system-ui;max-width:960px;margin:40px auto;padding:0 20px}button{font:inherit;padding:8px 20px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f4f7;padding:20px}iframe{position:absolute;width:1px;height:1px;left:-10000px}</style>
+<h1>합성 DOM 회귀·성능 검증 스냅샷</h1>
+<p>원본 v0.2와 확장된 스크립트(596a3f7)의 스냅샷입니다. 설치 파일은 저장소의 GitHub Pages에서 받으세요. 브라우저에서 실행하면 동작 검사 16개와 합성 DOM 벤치마크를 다시 수행합니다. 외부 연결이나 추가 설치는 필요 없습니다.</p>
+<p>실제 DOM·MutationObserver를 사용합니다. 프레임과 타이머의 대기 시간은 제어된 큐로 대체합니다. 아래 CPU 시간은 대기 시간·테스트 DOM 생성·결과 검사를 제외한 스크립트 실행 구간의 합입니다. 각 구조에서 예열 2회 후 측정 9회의 중앙값을 비교합니다. 웹페이지 전체 성능이나 실제 번역기·에디터 호환성을 측정하지 않습니다.</p>
+<button id="run">검증 실행</button><pre id="result">실행 대기 중</pre>
+<script>
+async function verify(sources) {
+    const pause = async () => { await Promise.resolve(); await Promise.resolve(); };
+    const environments = new Set();
+
+    function environment(source, html = '', counted = false, withoutBody = false) {
+        const frame = document.createElement('iframe');
+        document.body.append(frame);
+        const w = frame.contentWindow;
+        const d = w.document;
+        d.body.innerHTML = html;
+        if (withoutBody) d.body.remove();
+        const frames = [];
+        const timers = [];
+        const observers = [];
+        const metrics = { cpuMs: 0, raf: 0, timers: 0, queries: 0, closest: 0, attributeWrites: 0 };
+        const measure = fn => {
+            const start = performance.now();
+            try { return fn(); } finally { metrics.cpuMs += performance.now() - start; }
+        };
+        const NativeObserver = w.MutationObserver;
+        w.MutationObserver = class extends NativeObserver {
+            constructor(callback) {
+                super((records, observer) => measure(() => callback(records, observer)));
+                observers.push(this);
+            }
+        };
+        // Keep native DOM and MutationObserver delivery; control only frame/timer release.
+        w.requestAnimationFrame = fn => { metrics.raf++; frames.push(fn); return frames.length; };
+        w.setTimeout = fn => { metrics.timers++; timers.push(fn); return timers.length; };
+        if (counted) {
+            for (const prototype of [w.Element.prototype, w.Document.prototype]) {
+                const query = prototype.querySelectorAll;
+                prototype.querySelectorAll = function (...args) {
+                    metrics.queries++;
+                    return query.apply(this, args);
+                };
+            }
+            const closest = w.Element.prototype.closest;
+            w.Element.prototype.closest = function (...args) {
+                metrics.closest++;
+                return closest.apply(this, args);
+            };
+        }
+        const attributeObserver = counted ? new NativeObserver(records => {
+            metrics.attributeWrites += records.length;
+        }) : null;
+        attributeObserver?.observe(d, { subtree: true, attributes: true });
+        let error = null;
+        try { measure(() => w.eval(source)); } catch (caught) { error = caught.message; }
+        const env = {
+            w, d, metrics, error,
+            async settle() {
+                for (let iteration = 0; iteration < 20; iteration++) {
+                    await pause();
+                    const readyFrames = frames.splice(0);
+                    for (const fn of readyFrames) measure(() => fn(performance.now()));
+                    await pause();
+                    const readyTimers = timers.splice(0);
+                    for (const fn of readyTimers) measure(() => fn());
+                    await pause();
+                    if (!frames.length && !timers.length) return;
+                }
+                throw new Error('Scheduler did not settle');
+            },
+            reset() { for (const key of Object.keys(metrics)) metrics[key] = 0; },
+            dispose() {
+                observers.forEach(observer => observer.disconnect());
+                attributeObserver?.disconnect();
+                frame.remove();
+                environments.delete(env);
+            },
+        };
+        environments.add(env);
+        return env;
+    }
+    const marked = node => node.classList.contains('notranslate') && node.getAttribute('translate') === 'no';
+    const allMarked = d => [...d.querySelectorAll('pre, code')].every(marked);
+    const assert = (value, message) => { if (!value) throw new Error(message); };
+    const tests = [
+        ['Initial pre and code', async source => {
+            const e = environment(source, '<pre><code>x</code></pre><code>y</code>');
+            await e.settle(); assert(allMarked(e.d), 'Initial code missed');
+        }],
+        ['Dynamic wrapper subtree', async source => {
+            const e = environment(source);
+            e.d.body.innerHTML = '<div><pre><code>x</code></pre><code>y</code></div>';
+            await e.settle(); assert(allMarked(e.d), 'Dynamic code missed');
+        }],
+        ['Dynamic pre includes nested code', async source => {
+            const e = environment(source);
+            const pre = e.d.createElement('pre'); pre.innerHTML = '<code>x</code>'; e.d.body.append(pre);
+            await e.settle(); assert(allMarked(e.d), 'Nested code missed');
+        }],
+        ['Two observer deliveries before one frame', async source => {
+            const e = environment(source);
+            e.d.body.insertAdjacentHTML('beforeend', '<div><code>a</code></div>');
+            await pause();
+            e.d.body.insertAdjacentHTML('beforeend', '<div><code>b</code></div>');
+            await e.settle(); assert(allMarked(e.d), 'Second mutation delivery dropped');
+        }],
+        ['Six original editor selectors excluded', async source => {
+            const e = environment(source);
+            e.d.body.innerHTML = ['contenteditable="true"', 'class="ak-editor-content-area"', 'class="tinymce-editor"', 'data-testid="editor"', 'class="fabric-editor"', 'class="ProseMirror"'].map(attrs => `<div ${attrs}><pre><code>x</code></pre></div>`).join('');
+            await e.settle(); assert([...e.d.querySelectorAll('pre, code')].every(n => !marked(n)), 'Editor modified');
+        }],
+        ['Empty and plaintext-only contenteditable excluded', async source => {
+            const e = environment(source, '<div contenteditable><code>a</code></div><div contenteditable="plaintext-only"><code>b</code></div><div contenteditable="TRUE"><code>c</code></div>');
+            await e.settle(); assert([...e.d.querySelectorAll('code')].every(n => !marked(n)), 'Editor variant modified');
+        }],
+        ['contenteditable=false outside an editor is processed', async source => {
+            const e = environment(source, '<div contenteditable="false"><code>x</code></div>');
+            await e.settle(); assert(allMarked(e.d), 'Non-editor skipped');
+        }],
+        ['Mixed editor and ordinary descendants', async source => {
+            const e = environment(source);
+            e.d.body.innerHTML = '<section><code id="outside">a</code><div class="ProseMirror"><code id="inside">b</code></div></section>';
+            await e.settle(); assert(marked(e.d.getElementById('outside')) && !marked(e.d.getElementById('inside')), 'Mixed subtree wrong');
+        }],
+        ['Detached before observer delivery is ignored', async source => {
+            const e = environment(source);
+            const code = e.d.createElement('code'); e.d.body.append(code); code.remove();
+            await e.settle(); assert(!marked(code), 'Detached node modified');
+        }],
+        ['Moved out of editor gets processed', async source => {
+            const e = environment(source, '<div class="ProseMirror"><code>x</code></div>');
+            await e.settle(); e.d.body.append(e.d.querySelector('code'));
+            await e.settle(); assert(allMarked(e.d), 'Moved node missed');
+        }],
+        ['Reinsertion repairs missing translation attributes', async source => {
+            const e = environment(source, '<code>x</code>'); await e.settle();
+            const code = e.d.querySelector('code'); code.remove(); code.removeAttribute('class'); code.removeAttribute('translate'); e.d.body.append(code);
+            await e.settle(); assert(marked(code), 'Stale processed marker prevented repair');
+        }],
+        ['Already protected nodes receive no attribute writes', async source => {
+            const e = environment(source, '<pre class="notranslate" translate="no"><code class="notranslate" translate="no">x</code></pre>', true);
+            await e.settle(); assert(e.metrics.attributeWrites === 0, `Redundant writes: ${e.metrics.attributeWrites}`);
+        }],
+        ['Overlapping additions processed once', async source => {
+            const e = environment(source);
+            const section = e.d.createElement('section'); e.d.body.append(section);
+            section.innerHTML = '<div><pre><code>a</code></pre></div>';
+            section.firstChild.insertAdjacentHTML('beforeend', '<code>b</code>');
+            await e.settle(); assert(allMarked(e.d), 'Overlapping subtree missed');
+        }],
+        ['Body replacement is observed', async source => {
+            const e = environment(source); const body = e.d.createElement('body'); body.innerHTML = '<code>x</code>'; e.d.body.replaceWith(body);
+            await e.settle(); assert(allMarked(e.d), 'Replacement body missed');
+        }],
+        ['Installation before body exists', async source => {
+            const e = environment(source, '', false, true);
+            assert(!e.error, e.error);
+            const body = e.d.createElement('body'); body.innerHTML = '<code>x</code>'; e.d.documentElement.append(body);
+            await e.settle(); assert(allMarked(e.d), 'Later body missed');
+        }],
+        ['Text and comment mutations cause no attribute rewrites', async source => {
+            const e = environment(source, '<code>x</code>', true); await e.settle(); e.reset();
+            e.d.querySelector('code').textContent = 'new text'; e.d.body.append(e.d.createComment('test'));
+            await e.settle(); assert(e.metrics.attributeWrites === 0 && allMarked(e.d), 'Text update changed attributes');
+        }],
+    ];
+    const testResults = [];
+    for (const [name, test] of tests) {
+        const result = { name };
+        for (const [version, source] of Object.entries(sources)) {
+            try { await test(source); result[version] = 'PASS'; }
+            catch (error) { result[version] = `FAIL: ${error.message}`; }
+            finally { for (const env of environments) env.dispose(); }
+        }
+        testResults.push(result);
+    }
+    const workloads = {
+        'Single subtree: 2000 blocks': d => {
+            const root = d.createElement('section'); root.innerHTML = '<p>Text</p><pre><code>x</code></pre>'.repeat(2000); d.body.append(root);
+        },
+        'Sibling additions: 2000 blocks': d => {
+            for (let i = 0; i < 2000; i++) {
+                const root = d.createElement('section'); root.innerHTML = '<p>Text</p><pre><code>x</code></pre>'; d.body.append(root);
+            }
+        },
+        'Overlapping additions: depth 80, 320 blocks': d => {
+            let root = d.createElement('section'); d.body.append(root);
+            for (let i = 0; i < 80; i++) {
+                const next = d.createElement('section'); root.append(next);
+                next.innerHTML = '<pre><code>x</code></pre>'.repeat(4); root = next;
+            }
+        },
+        'No code: 2000 sibling additions': d => {
+            for (let i = 0; i < 2000; i++) {
+                const root = d.createElement('section'); root.textContent = 'Text'; d.body.append(root);
+            }
+        },
+    };
+    const benchmarks = [];
+    const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+    for (const [name, build] of Object.entries(workloads)) {
+        const entry = { name };
+        const samples = { original: [], optimized: [] };
+        // Alternate ordering; two warmups followed by nine measured samples.
+        for (let round = -2; round < 9; round++) {
+            const versions = round % 2 === 0 ? ['original', 'optimized'] : ['optimized', 'original'];
+            for (const version of versions) {
+                const e = environment(sources[version]); await e.settle(); e.reset();
+                build(e.d); await e.settle();
+                const ms = e.metrics.cpuMs;
+                assert(allMarked(e.d), `${version}: incomplete benchmark output`);
+                if (round >= 0) samples[version].push(ms);
+                e.dispose();
+            }
+        }
+        for (const version of ['original', 'optimized']) {
+            const e = environment(sources[version], '', true); await e.settle(); e.reset();
+            build(e.d); await e.settle();
+            // Capture operation counts separately from the timing samples.
+            entry[version] = { medianCpuMs: median(samples[version]), samplesCpuMs: samples[version], counts: { ...e.metrics } };
+            delete entry[version].counts.cpuMs;
+            entry[version].targets = e.d.querySelectorAll('pre, code').length;
+            e.dispose();
+        }
+        entry.speedup = entry.original.medianCpuMs / entry.optimized.medianCpuMs;
+        benchmarks.push(entry);
+    }
+    return {
+        userAgent: navigator.userAgent,
+        date: new Date().toISOString(),
+        methodology: 'Real browser DOM and native MutationObserver. requestAnimationFrame and setTimeout callbacks released by deterministic queues; waiting time, DOM fixture creation, and assertions excluded from CPU totals. Callback dispatch and instrumentation have overhead. 2 warmups + 9 samples, alternating version order. DOM operation counts from a separate instrumented run. Synthetic fixtures; not a whole-page speedup or real editor/translation integration test.',
+        tests: testResults,
+        benchmarks,
+    };
+}
+
+const sources = {"original": "// User-provided v0.2, with comments omitted; executable logic is unchanged.\n(function() {\n    'use strict';\n    const addClassAndAttribute = (element) => {\n        if (element.hasAttribute('data-notranslate-processed')) return;\n        element.classList.add('notranslate');\n        element.setAttribute('translate', 'no');\n        element.setAttribute('data-notranslate-processed', 'true');\n    };\n    const processTags = (tags) => { tags.forEach(addClassAndAttribute); };\n    const editorSelectors = ['[contenteditable=\"true\"]', '.ak-editor-content-area', '.tinymce-editor', '[data-testid=\"editor\"]', '.fabric-editor', '.ProseMirror'];\n    const isInEditor = (element) => editorSelectors.some(selector => element.closest(selector) !== null);\n    let isProcessing = false;\n    const throttledProcess = (callback) => {\n        if (isProcessing) return;\n        isProcessing = true;\n        requestAnimationFrame(() => { callback(); isProcessing = false; });\n    };\n    const observerCallback = (mutations) => {\n        throttledProcess(() => {\n            mutations.forEach((mutation) => {\n                mutation.addedNodes.forEach((node) => {\n                    if (node.nodeType === Node.ELEMENT_NODE) {\n                        const element = node;\n                        if (isInEditor(element)) return;\n                        if (element.matches('pre, code')) {\n                            setTimeout(() => addClassAndAttribute(element), 100);\n                        } else {\n                            const preTags = element.querySelectorAll('pre:not([data-notranslate-processed])');\n                            const codeTags = element.querySelectorAll('code:not([data-notranslate-processed])');\n                            const validPreTags = Array.from(preTags).filter(tag => !isInEditor(tag));\n                            const validCodeTags = Array.from(codeTags).filter(tag => !isInEditor(tag));\n                            setTimeout(() => { processTags(validPreTags); processTags(validCodeTags); }, 100);\n                        }\n                    }\n                });\n            });\n        });\n    };\n    const observer = new MutationObserver(observerCallback);\n    observer.observe(document.body, { childList: true, subtree: true });\n    const processInitialTags = () => {\n        const allPreTags = document.querySelectorAll('pre:not([data-notranslate-processed])');\n        const allCodeTags = document.querySelectorAll('code:not([data-notranslate-processed])');\n        const validPreTags = Array.from(allPreTags).filter(tag => !isInEditor(tag));\n        const validCodeTags = Array.from(allCodeTags).filter(tag => !isInEditor(tag));\n        processTags(validPreTags);\n        processTags(validCodeTags);\n    };\n    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', processInitialTags);\n    else processInitialTags();\n})();\n", "optimized": "// ==UserScript==\n// @name         코드 번역 방지\n// @namespace    http://tampermonkey.net/\n// @version      0.0.0\n// @description  에디터 밖의 pre, code 태그에 번역 방지 속성을 추가합니다.\n// @author       이재민\n// @match        *://*/*\n// @run-at       document-start\n// @grant        none\n// @homepageURL  https://github.com/jaem1n207/tampermonkey-translation-exclusions\n// @updateURL    https://jaem1n207.github.io/tampermonkey-translation-exclusions/prevent-code-translation.meta.js\n// @downloadURL  https://jaem1n207.github.io/tampermonkey-translation-exclusions/prevent-code-translation.user.js\n// ==/UserScript==\n\n(() => {\n    'use strict';\n\n    const INSTALLED = Symbol.for('jaem1n207.translationExclusions');\n    if (document[INSTALLED]) return;\n\n    const EDITOR_CLASSES = ['ak-editor-content-area', 'tinymce-editor', 'fabric-editor', 'ProseMirror'];\n    const EDITOR = [\n        '[contenteditable=\"\"]',\n        '[contenteditable=\"true\" i]',\n        '[contenteditable=\"plaintext-only\" i]',\n        '[data-testid=\"editor\"]',\n        ...EDITOR_CLASSES.map(name => `.${name}`),\n    ].join(',');\n    // 별도 처리 표시 대신 실제 속성으로 중복 작업을 거릅니다.\n    // 사이트별 추가 대상은 이 목록에 명확한 셀렉터로 지정합니다.\n    const CONTENT = [\n        'pre', 'code', 'kbd', 'samp', 'var', 'math',\n        'div.code-block', 'span.code-block', 'div.hljs', 'span.hljs',\n        '[data-code-block]', '[data-translation-exclude]',\n        '.katex', 'mjx-container', '.MathJax',\n    ].join(',');\n    const PROTECTED = '.notranslate[translate=\"no\"]';\n    const BOUNDARY_CLASSES = [...EDITOR_CLASSES, 'code-block', 'hljs', 'katex', 'MathJax'];\n    const BOUNDARY_CLASS = new RegExp(`(?:^|\\\\s)(?:${BOUNDARY_CLASSES.join('|')})(?=\\\\s|$)`);\n\n    const changes = new WeakMap();\n    const observed = new WeakSet();\n    const captured = new WeakMap();\n    const frames = new WeakSet();\n\n    function mark(element) {\n        const saved = changes.get(element) ?? { classAdded: false, translate: undefined };\n        changes.set(element, saved);\n        if (!element.classList.contains('notranslate')) {\n            saved.classAdded = true;\n            element.classList.add('notranslate');\n        }\n        if (element.getAttribute('translate') !== 'no') {\n            if (saved.translate === undefined) saved.translate = element.getAttribute('translate');\n            element.setAttribute('translate', 'no');\n        }\n    }\n\n    function restore(element) {\n        const saved = changes.get(element);\n        if (!saved) return;\n        changes.delete(element);\n        // 용도가 바뀌면 직접 추가한 값만 되돌리고 사이트의 기존 값은 보존합니다.\n        if (saved.classAdded) element.classList.remove('notranslate');\n        if (saved.translate !== undefined && element.getAttribute('translate') === 'no') {\n            if (saved.translate === null) element.removeAttribute('translate');\n            else element.setAttribute('translate', saved.translate);\n        }\n    }\n\n    function scan(root) {\n        if (root.nodeType === Node.ELEMENT_NODE) {\n            update(root);\n            discover(root);\n        }\n        if (!root.firstElementChild) return;\n        for (const element of root.querySelectorAll(`${CONTENT}, ${EDITOR}, .notranslate, [translate]`)) update(element);\n        // Shadow DOM은 일반 자손 검색에 포함되지 않아 추가된 부분에서 호스트도 찾습니다.\n        for (const element of root.querySelectorAll('*')) discover(element);\n    }\n\n    function discover(element) {\n        if (element.localName === 'iframe') watchFrame(element);\n        const shadow = element.shadowRoot ?? captured.get(element);\n        if (shadow) {\n            if (observed.has(shadow)) scan(shadow);\n            else observe(shadow);\n        }\n    }\n\n    function watchFrame(frame) {\n        if (!frames.has(frame)) {\n            frames.add(frame);\n            frame.addEventListener('load', () => watchFrame(frame));\n        }\n        // 다른 출처와 opaque sandbox 문서는 부모에서 접근하지 않습니다.\n        const doc = frame.contentDocument;\n        if (doc) watchDocument(doc);\n    }\n\n    function closestMatch(element, selector) {\n        for (let current = element; current; current = current.getRootNode().host) {\n            const match = current.closest(selector);\n            if (match) return match;\n        }\n        return null;\n    }\n\n    let repairs = new WeakMap();\n    let resetPending = false;\n\n    function update(element) {\n        const content = element.matches(CONTENT);\n        if (!content && !changes.has(element) && !element.hasAttribute('translate') && !element.matches(EDITOR)) return;\n        const editor = closestMatch(element, EDITOR);\n        const nestedOverride = !content && !editor && (element.hasAttribute('translate') || changes.has(element))\n            && closestMatch(element.parentElement ?? element.getRootNode().host, CONTENT);\n        if (editor ? editor !== element : !content && !nestedOverride) {\n            restore(element);\n            return;\n        }\n        if (element.matches(PROTECTED)) return;\n        const count = repairs.get(element) ?? 0;\n        // 페이지가 같은 속성을 계속 지워도 microtask 루프로 화면을 멈추지 않습니다.\n        if (count >= 3) return;\n        repairs.set(element, count + 1);\n        if (!resetPending) {\n            resetPending = true;\n            setTimeout(() => { repairs = new WeakMap(); resetPending = false; }, 0);\n        }\n        mark(element);\n    }\n\n    function boundaryChanged(mutation) {\n        const before = mutation.oldValue;\n        const after = mutation.target.getAttribute(mutation.attributeName);\n        if (mutation.attributeName === 'contenteditable') {\n            const editable = value => value !== null && ['', 'true', 'plaintext-only'].includes(value.toLowerCase());\n            return editable(before) !== editable(after);\n        }\n        if (mutation.attributeName === 'data-testid') return (before === 'editor') !== (after === 'editor');\n        if (['data-code-block', 'data-translation-exclude'].includes(mutation.attributeName)) return (before !== null) !== (after !== null);\n        if (mutation.attributeName !== 'class') return false;\n        if (!BOUNDARY_CLASS.test(before ?? '') && !BOUNDARY_CLASS.test(after ?? '')) return false;\n        const oldClasses = new Set((before ?? '').split(/\\s+/));\n        return BOUNDARY_CLASSES.some(name => oldClasses.has(name) !== mutation.target.classList.contains(name));\n    }\n\n    function handleMutations(mutations) {\n        const roots = new Set();\n        for (const mutation of mutations) {\n            if (mutation.type === 'attributes') {\n                if (mutation.target.isConnected) {\n                    // 편집기·코드 경계가 바뀔 때만 기존 자손도 다시 판정합니다.\n                    if (boundaryChanged(mutation)) roots.add(mutation.target);\n                    // 자체 속성 쓰기로 생긴 알림은 조상을 다시 탐색할 필요가 없습니다.\n                    else if (!mutation.target.matches(PROTECTED)) update(mutation.target);\n                }\n                continue;\n            }\n            for (const node of mutation.addedNodes) {\n                if (node.nodeType === Node.ELEMENT_NODE && node.isConnected) {\n                    roots.add(node);\n                }\n            }\n        }\n\n        for (const root of roots) {\n            // 같은 배치에 부모도 추가됐다면 부모를 탐색할 때 함께 처리합니다.\n            let covered = false;\n            for (let parent = root.parentElement; parent; parent = parent.parentElement) {\n                if (roots.has(parent)) {\n                    covered = true;\n                    break;\n                }\n            }\n            if (!covered) scan(root);\n        }\n    }\n\n    function observe(root) {\n        if (observed.has(root)) return;\n        observed.add(root);\n        // 루트별 observer를 사용해 제거된 Shadow DOM을 전역 observer에 붙잡아 두지 않습니다.\n        new MutationObserver(handleMutations).observe(root, {\n            childList: true, subtree: true, attributes: true, attributeOldValue: true,\n            attributeFilter: ['class', 'translate', 'contenteditable', 'data-testid', 'data-code-block', 'data-translation-exclude'],\n        });\n        scan(root);\n    }\n\n    function watchDocument(doc) {\n        if (doc[INSTALLED] || !doc.defaultView) return;\n        Object.defineProperty(doc, INSTALLED, { value: true });\n        const prototype = doc.defaultView.Element.prototype;\n        const descriptor = Object.getOwnPropertyDescriptor(prototype, 'attachShadow');\n        if (descriptor && (descriptor.writable || descriptor.configurable)) {\n            Object.defineProperty(prototype, 'attachShadow', {\n                ...descriptor,\n                value: function attachShadow(...args) {\n                    const root = Reflect.apply(descriptor.value, this, args);\n                    // mode를 바꾸지 않고 새 closed root의 반환값도 추적합니다.\n                    captured.set(this, root);\n                    observe(root);\n                    return root;\n                },\n            });\n        }\n        observe(doc);\n        if (doc.readyState === 'loading') {\n            // 파서가 생성한 declarative open Shadow DOM도 로드 종료 시 한 번 수집합니다.\n            doc.addEventListener('DOMContentLoaded', () => scan(doc), { once: true });\n        }\n    }\n\n    watchDocument(document);\n})();\n"};
+const run = document.getElementById('run');
+const output = document.getElementById('result');
+run.addEventListener('click', async () => {
+    run.disabled = true;
+    output.textContent = '검증 중…';
+    try { output.textContent = JSON.stringify(await verify(sources), null, 2); }
+    catch (error) { output.textContent = error.stack; }
+    finally { run.disabled = false; }
+});
+</script></html>

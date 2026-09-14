@@ -1,0 +1,283 @@
+{
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.12 Safari/537.36",
+  "date": "2026-09-14T07:15:19.780Z",
+  "methodology": "Real browser DOM and native MutationObserver. requestAnimationFrame and setTimeout callbacks released by deterministic queues; waiting time, DOM fixture creation, and assertions excluded from CPU totals. Callback dispatch and instrumentation have overhead. 2 warmups + 9 samples, alternating version order. DOM operation counts from a separate instrumented run. Synthetic fixtures; not a whole-page speedup or real editor/translation integration test.",
+  "tests": [
+    {
+      "name": "Initial pre and code",
+      "original": "PASS",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Dynamic wrapper subtree",
+      "original": "PASS",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Dynamic pre includes nested code",
+      "original": "FAIL: Nested code missed",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Two observer deliveries before one frame",
+      "original": "FAIL: Second mutation delivery dropped",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Six original editor selectors excluded",
+      "original": "PASS",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Empty and plaintext-only contenteditable excluded",
+      "original": "FAIL: Editor variant modified",
+      "optimized": "PASS"
+    },
+    {
+      "name": "contenteditable=false outside an editor is processed",
+      "original": "PASS",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Mixed editor and ordinary descendants",
+      "original": "PASS",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Detached before observer delivery is ignored",
+      "original": "FAIL: Detached node modified",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Moved out of editor gets processed",
+      "original": "PASS",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Reinsertion repairs missing translation attributes",
+      "original": "FAIL: Stale processed marker prevented repair",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Already protected nodes receive no attribute writes",
+      "original": "FAIL: Redundant writes: 6",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Overlapping additions processed once",
+      "original": "PASS",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Body replacement is observed",
+      "original": "FAIL: Replacement body missed",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Installation before body exists",
+      "original": "FAIL: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.",
+      "optimized": "PASS"
+    },
+    {
+      "name": "Text and comment mutations cause no attribute rewrites",
+      "original": "PASS",
+      "optimized": "PASS"
+    }
+  ],
+  "benchmarks": [
+    {
+      "name": "Single subtree: 2000 blocks",
+      "original": {
+        "medianCpuMs": 3.600000023841858,
+        "samplesCpuMs": [
+          3.5,
+          3.6999999284744263,
+          3.5,
+          3.600000023841858,
+          3.700000047683716,
+          3.5,
+          3.399999976158142,
+          3.799999952316284,
+          4.899999976158142
+        ],
+        "counts": {
+          "raf": 1,
+          "timers": 1,
+          "queries": 2,
+          "closest": 24006,
+          "attributeWrites": 12000
+        },
+        "targets": 4000
+      },
+      "optimized": {
+        "medianCpuMs": 9.100000143051147,
+        "samplesCpuMs": [
+          9.100000023841858,
+          10.99999988079071,
+          10.299999952316284,
+          9.100000143051147,
+          8.600000023841858,
+          10.5,
+          8.300000071525574,
+          9.399999976158142,
+          9.100000143051147
+        ],
+        "counts": {
+          "raf": 0,
+          "timers": 1,
+          "queries": 2,
+          "closest": 4000,
+          "attributeWrites": 8000
+        },
+        "targets": 4000
+      },
+      "speedup": 0.395604392005516
+    },
+    {
+      "name": "Sibling additions: 2000 blocks",
+      "original": {
+        "medianCpuMs": 6.799999952316284,
+        "samplesCpuMs": [
+          10,
+          6.799999952316284,
+          9.300000071525574,
+          10.299999833106995,
+          7.099999904632568,
+          6.300000071525574,
+          6.599999785423279,
+          6.600000023841858,
+          6.200000047683716
+        ],
+        "counts": {
+          "raf": 1,
+          "timers": 2000,
+          "queries": 4000,
+          "closest": 36000,
+          "attributeWrites": 12000
+        },
+        "targets": 4000
+      },
+      "optimized": {
+        "medianCpuMs": 12.00000011920929,
+        "samplesCpuMs": [
+          12.299999952316284,
+          11.700000047683716,
+          12.399999976158142,
+          12,
+          12,
+          14.5,
+          11.800000071525574,
+          23,
+          12.00000011920929
+        ],
+        "counts": {
+          "raf": 0,
+          "timers": 1,
+          "queries": 4000,
+          "closest": 4000,
+          "attributeWrites": 8000
+        },
+        "targets": 4000
+      },
+      "speedup": 0.5666666570636962
+    },
+    {
+      "name": "Overlapping additions: depth 80, 320 blocks",
+      "original": {
+        "medianCpuMs": 28.699999928474426,
+        "samplesCpuMs": [
+          28.100000023841858,
+          28.90000009536743,
+          29,
+          28.600000023841858,
+          31.700000047683716,
+          28.699999928474426,
+          28.100000023841858,
+          28.799999952316284,
+          28.299999952316284
+        ],
+        "counts": {
+          "raf": 1,
+          "timers": 401,
+          "queries": 22,
+          "closest": 161346,
+          "attributeWrites": 1920
+        },
+        "targets": 640
+      },
+      "optimized": {
+        "medianCpuMs": 3.399999976158142,
+        "samplesCpuMs": [
+          3.399999976158142,
+          3.1999999284744263,
+          3.399999976158142,
+          3.5,
+          3.399999976158142,
+          3.399999976158142,
+          3.299999952316284,
+          3.4000000953674316,
+          3.399999976158142
+        ],
+        "counts": {
+          "raf": 0,
+          "timers": 1,
+          "queries": 2,
+          "closest": 320,
+          "attributeWrites": 1280
+        },
+        "targets": 640
+      },
+      "speedup": 8.441176508743458
+    },
+    {
+      "name": "No code: 2000 sibling additions",
+      "original": {
+        "medianCpuMs": 2.5999999046325684,
+        "samplesCpuMs": [
+          2.5999999046325684,
+          2.5,
+          2.899999976158142,
+          2.399999976158142,
+          2.700000047683716,
+          2.6000001430511475,
+          2.5999999046325684,
+          2.5,
+          2.799999952316284
+        ],
+        "counts": {
+          "raf": 1,
+          "timers": 2000,
+          "queries": 4000,
+          "closest": 12000,
+          "attributeWrites": 0
+        },
+        "targets": 0
+      },
+      "optimized": {
+        "medianCpuMs": 1.7000000476837158,
+        "samplesCpuMs": [
+          1.7000000476837158,
+          1.8000000715255737,
+          1.7999999523162842,
+          1.7000000476837158,
+          1.8000000715255737,
+          1.6999999284744263,
+          1.8000000715255737,
+          1.7000000476837158,
+          1.7000000476837158
+        ],
+        "counts": {
+          "raf": 0,
+          "timers": 0,
+          "queries": 0,
+          "closest": 0,
+          "attributeWrites": 0
+        },
+        "targets": 0
+      },
+      "speedup": 1.5294116657085512
+    }
+  ],
+  "sourceCommit": "596a3f74c99c635913086ebe1ec15c1195c6ff8a",
+  "baseline": "User-provided v0.2, executable logic unchanged; optimized denotes the expanded current script."
+}

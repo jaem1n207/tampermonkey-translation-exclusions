@@ -2,7 +2,7 @@
 // @name         코드 번역 방지
 // @namespace    http://tampermonkey.net/
 // @version      0.0.0
-// @description  에디터 밖의 pre, code 태그에 번역 방지 속성을 추가합니다.
+// @description  코드·수식·편집기에 번역 제외 속성을 적용하고 동적 콘텐츠와 같은 출처의 프레임을 감시합니다.
 // @author       이재민
 // @match        *://*/*
 // @run-at       document-start

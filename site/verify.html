@@ -3,28 +3,41 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>번역 제외 스크립트 설치 확인</title>
-<style>body{font:16px/1.7 system-ui,sans-serif;max-width:760px;margin:48px auto;padding:0 24px;color:#17212b}pre{background:#f2f4f7;padding:16px}button{font:inherit;padding:8px 14px}li{margin:8px 0}.pass{color:#067647}.fail{color:#b42318}</style>
+<style>body{font:16px/1.7 system-ui,sans-serif;max-width:760px;margin:48px auto;padding:0 24px;color:#17212b}pre{background:#f2f4f7;padding:16px}button{font:inherit;padding:8px 14px}li{margin:8px 0}.pass{color:#067647}.fail{color:#b42318}iframe{width:100%;height:80px;border:1px solid #d0d5dd}</style>
 <h1>설치 동작 확인</h1>
-<p>이 페이지는 번역 제외 속성을 직접 추가하지 않습니다. 설치된 UserScript가 아래 코드에 속성을 붙였는지 검사합니다.</p>
-<p>설치·업데이트 후 이 페이지를 새로고침하고, 아래 버튼을 눌러 동적 콘텐츠도 확인하세요.</p>
+<p>이 페이지는 번역 제외 속성을 직접 추가하지 않습니다. 설치된 UserScript가 아래 내용을 보호하는지 검사합니다.</p>
+<p>설치·업데이트 후 새로고침하고, 아래 버튼을 눌러 동적 콘텐츠·속성 복구·Shadow DOM·iframe도 확인하세요.</p>
 <p id="ordinary">This ordinary sentence should remain eligible for translation.</p>
 <pre id="initial-pre"><code id="initial-code">const original = "Keep this code unchanged";</code></pre>
-<div contenteditable="true" aria-label="편집기 제외 확인"><code id="editor-code">editable code</code></div>
+<div class="code-block" id="explicit-code">const explicitlyMarked = true;</div>
+<p><kbd id="keys">Ctrl+C</kbd> <math id="math"><mi>x</mi><mo>+</mo><mn>1</mn></math></p>
+<div contenteditable="true" id="editor" aria-label="보호되는 편집기"><code id="editor-code">editable code</code></div>
 <button id="add">더보기 · 동적 코드 추가</button>
 <div id="dynamic"></div>
 <ul id="results" aria-live="polite"></ul>
-<p>이 검사는 속성 적용 여부만 확인합니다. 설치된 버전은 Tampermonkey에서 확인하세요. 번역기 자체의 동작까지 검사하지 않습니다.</p>
-<p><a href="./">설치 페이지로 돌아가기</a></p>
+<p>검사는 속성 적용 여부만 확인합니다. 설치 버전은 Tampermonkey에서 확인하세요. 실제 번역기와의 통합 동작까지 검사하지 않습니다.</p>
+<p><a href="./">설치 페이지</a> · <a href="https://github.com/jaem1n207/tampermonkey-translation-exclusions/blob/main/docs/coverage.md">처리 조건과 남는 한계</a></p>
 <script>
-const marked = element => element.classList.contains('notranslate') && element.getAttribute('translate') === 'no';
+const marked = element => !!element && element.classList.contains('notranslate') && element.getAttribute('translate') === 'no';
+let shadowCode;
+let frame;
+let added = false;
 function inspect() {
     const cases = [
-        ['초기 pre·code 보호', marked(document.getElementById('initial-pre')) && marked(document.getElementById('initial-code'))],
-        ['일반 문장 유지', !marked(document.getElementById('ordinary'))],
-        ['에디터 내부 유지', !marked(document.getElementById('editor-code'))],
+        ['초기 pre·code 보호 및 속성 복구', marked(document.getElementById('initial-pre')) && marked(document.getElementById('initial-code'))],
+        ['일반 문장 유지', !document.getElementById('ordinary').hasAttribute('translate')],
+        ['명시적 div 코드 보호', marked(document.getElementById('explicit-code'))],
+        ['키 입력과 수식 보호', marked(document.getElementById('keys')) && marked(document.getElementById('math'))],
+        ['편집기 루트 보호', marked(document.getElementById('editor'))],
+        ['편집기 내부 구조 유지', !document.getElementById('editor-code').hasAttribute('translate')],
     ];
-    const dynamic = document.querySelectorAll('#dynamic pre, #dynamic code');
-    if (dynamic.length) cases.push(['동적으로 추가된 pre·code 보호', [...dynamic].every(marked)]);
+    if (added) {
+        cases.push(
+            ['동적으로 추가된 pre·code 보호', [...document.querySelectorAll('#dynamic pre, #dynamic code')].every(marked)],
+            ['새 Shadow DOM 보호', marked(shadowCode)],
+            ['같은 출처 iframe 보호', marked(frame.contentDocument?.querySelector('code'))],
+        );
+    }
     document.getElementById('results').replaceChildren(...cases.map(([label, passed]) => {
         const item = document.createElement('li');
         item.className = passed ? 'pass' : 'fail';
@@ -33,7 +46,22 @@ function inspect() {
     }));
 }
 document.getElementById('add').addEventListener('click', () => {
-    document.getElementById('dynamic').insertAdjacentHTML('beforeend', '<pre><code>const loadedLater = true;</code></pre>');
+    added = true;
+    const original = document.getElementById('initial-code');
+    original.classList.remove('notranslate');
+    original.removeAttribute('translate');
+    original.textContent = 'const reusedNode = true;';
+    const dynamic = document.getElementById('dynamic');
+    dynamic.innerHTML = '<pre><code>const loadedLater = true;</code></pre>';
+    const host = document.createElement('div');
+    const shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML = '<code>const insideShadow = true;</code>';
+    shadowCode = shadow.querySelector('code');
+    frame = document.createElement('iframe');
+    frame.title = '같은 출처 프레임 검사';
+    frame.srcdoc = '<!doctype html><meta charset="utf-8"><code>const insideFrame = true;</code>';
+    frame.addEventListener('load', () => setTimeout(inspect, 100), { once: true });
+    dynamic.append(host, frame);
     setTimeout(inspect, 100);
 });
 setTimeout(inspect, 500);
