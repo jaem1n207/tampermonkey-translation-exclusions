@@ -6,8 +6,13 @@
     "node": ">=24"
   },
   "scripts": {
-    "test": "node --test",
+    "test": "npm run test:unit && npm run test:browser",
     "build": "node scripts/release.mjs build",
-    "verify:deployment": "node scripts/release.mjs verify"
+    "verify:deployment": "node scripts/release.mjs verify",
+    "test:unit": "node --test tests/*.test.mjs",
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
   }
 }

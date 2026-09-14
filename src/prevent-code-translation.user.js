@@ -46,9 +46,29 @@
         }
     }
 
+    let repairs = new WeakMap();
+    let resetPending = false;
+
+    function repair(element) {
+        if (!element.matches(TARGET) || element.closest(EDITOR)) return;
+        const count = repairs.get(element) ?? 0;
+        // 페이지가 같은 속성을 계속 지워도 microtask 루프로 화면을 멈추지 않습니다.
+        if (count >= 3) return;
+        repairs.set(element, count + 1);
+        if (!resetPending) {
+            resetPending = true;
+            setTimeout(() => { repairs = new WeakMap(); resetPending = false; }, 0);
+        }
+        mark(element);
+    }
+
     new MutationObserver((mutations) => {
         const roots = new Set();
         for (const mutation of mutations) {
+            if (mutation.type === 'attributes') {
+                if (mutation.target.isConnected) repair(mutation.target);
+                continue;
+            }
             for (const node of mutation.addedNodes) {
                 if (node.nodeType === Node.ELEMENT_NODE && node.isConnected) {
                     roots.add(node);
@@ -67,7 +87,7 @@
             }
             if (!covered) scan(root);
         }
-    }).observe(document, { childList: true, subtree: true });
+    }).observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'translate'] });
 
     if (document.documentElement) scan(document.documentElement);
 })();
