@@ -89,7 +89,7 @@ export function renderLanding(copy) {
 <section class="hero wrap">
 <div class="hero-copy"><h1>${e(copy.hero.line1)}<br><span>${e(copy.hero.line2)}</span></h1>
 <p class="hero-body">${e(copy.hero.body)}</p>
-<div class="install-actions"><a class="button primary" href="${install}">${e(copy.hero.primary)} <span aria-hidden="true">↗</span></a><a class="secondary" href="${listingURL}">${e(copy.hero.secondary)}</a></div>
+<div class="install-actions"><a class="button primary" href="${install}">${e(copy.hero.primary)} <span aria-hidden="true">↗</span></a><a class="secondary" href="${listingURL.replace('/en/', `/${copy.locale}/`)}">${e(copy.hero.secondary)}</a></div>
 <p class="small">${e(copy.hero.note)}</p><p class="existing">${e(copy.hero.existing)}</p>
 </div>
 <figure class="example">

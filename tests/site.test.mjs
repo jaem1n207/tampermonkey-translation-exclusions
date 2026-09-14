@@ -36,6 +36,7 @@ test('localized pages expose canonical language routes and working install links
         const prefix = code === 'en' ? './' : '../';
         assert(landing.includes(`href="${prefix}prevent-code-translation.user.js"`));
         assert(landing.includes('href="./verify.html"'));
+        assert(landing.includes(`href="https://greasyfork.org/${code}/scripts/595754-prevent-code-translation"`));
         assert(verify.includes(`src="${prefix}assets/verify.js"`));
     }
 });
