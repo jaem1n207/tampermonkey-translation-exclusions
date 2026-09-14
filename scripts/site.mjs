@@ -96,7 +96,7 @@ export function renderLanding(copy) {
 <figure class="example">
 <div class="example-top"><span>${e(copy.demo.label)}</span><span class="example-dots" aria-hidden="true">•••</span></div>
 <div class="demo-switch" hidden role="group" aria-label="${e(copy.demo.label)}"><button type="button" data-demo="original" aria-pressed="false">${e(copy.demo.original)}</button><button type="button" data-demo="translated" aria-pressed="true">${e(copy.demo.translated)}</button></div>
-<div class="document-example"><div class="example-prose"><p id="demo-prose" lang="${copy.demo.targetLang}" data-original="Find the available products." data-translated="${e(copy.demo.targetText)}" data-target-lang="${copy.demo.targetLang}">${e(copy.demo.targetText)}</p><span class="annotation">${e(copy.demo.proseLabel)}</span></div>
+<div class="document-example"><div class="example-prose"><p id="demo-prose" lang="${copy.demo.targetLang}" data-original="Find the available products." data-translated="${e(copy.demo.targetText)}" data-target-lang="${copy.demo.targetLang}"><span>${e(copy.demo.targetText)}</span></p><span class="annotation">${e(copy.demo.proseLabel)}</span></div>
 <pre class="example-code" translate="no"><code><span class="syntax-keyword">const</span> inStock = products.<span class="syntax-function">filter</span>(
   product =&gt; product.stock &gt; <span class="syntax-number">0</span>
 );</code></pre><p class="code-status"><span aria-hidden="true">✓</span> ${e(copy.demo.codeLabel)}</p></div>
