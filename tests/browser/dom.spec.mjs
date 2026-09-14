@@ -166,3 +166,18 @@ test('entering and leaving editor mode reconciles existing descendants', async (
         await protectedElement(page.locator('#code'));
     }
 });
+
+test('document-start protects parser-added code before DOMContentLoaded without requiring a body', async ({ page }) => {
+    const start = /@run-at\s+document-start/.test(source);
+    await page.addInitScript(({ source, start }) => {
+        if (start) (0, eval)(source);
+        else document.addEventListener('DOMContentLoaded', () => (0, eval)(source), { once: true });
+    }, { source, start });
+    await page.route('https://fixture.test/start', route => route.fulfill({
+        contentType: 'text/html',
+        body: '<!doctype html><code id="early">x()</code><script>queueMicrotask(() => { window.earlyTranslate = document.getElementById("early").getAttribute("translate"); });</script>',
+    }));
+    await page.goto('https://fixture.test/start');
+    expect(await page.evaluate(() => window.earlyTranslate)).toBe('no');
+    await protectedElement(page.locator('#early'));
+});

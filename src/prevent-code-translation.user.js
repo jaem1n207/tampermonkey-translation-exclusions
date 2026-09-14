@@ -5,7 +5,7 @@
 // @description  에디터 밖의 pre, code 태그에 번역 방지 속성을 추가합니다.
 // @author       이재민
 // @match        *://*/*
-// @run-at       document-end
+// @run-at       document-start
 // @grant        none
 // @homepageURL  https://github.com/jaem1n207/tampermonkey-translation-exclusions
 // @updateURL    https://jaem1n207.github.io/tampermonkey-translation-exclusions/prevent-code-translation.meta.js
