@@ -293,3 +293,21 @@ test('opaque sandboxed frames are skipped without disrupting the accessible docu
     await expect(page.frameLocator('iframe').locator('#opaque')).not.toHaveAttribute('translate');
     expect(errors).toEqual([]);
 });
+
+test('explicit translate=yes descendants cannot override code protection and are restored when moved out', async ({ page }) => {
+    await install(page, '<pre><span id="override" translate="yes">original_identifier</span></pre><p id="prose" translate="yes">ordinary sentence</p>');
+    await protectedElement(page.locator('#override'));
+    await expect(page.locator('#prose')).toHaveAttribute('translate', 'yes');
+    await page.locator('#override').evaluate(node => document.body.append(node));
+    await expect(page.locator('#override')).toHaveAttribute('translate', 'yes');
+    await expect(page.locator('#override')).not.toHaveClass(/notranslate/);
+});
+
+test('changing a container code marker reconciles descendant translation overrides', async ({ page }) => {
+    await install(page, '<div id="container"><span id="override" translate="yes">identifier</span></div>');
+    await page.locator('#container').evaluate(node => node.setAttribute('data-code-block', ''));
+    await protectedElement(page.locator('#override'));
+    await page.locator('#container').evaluate(node => node.removeAttribute('data-code-block'));
+    await expect(page.locator('#override')).toHaveAttribute('translate', 'yes');
+    await expect(page.locator('#override')).not.toHaveClass(/notranslate/);
+});

@@ -93,10 +93,10 @@
         if (doc) watchDocument(doc);
     }
 
-    function closestEditor(element) {
+    function closestMatch(element, selector) {
         for (let current = element; current; current = current.getRootNode().host) {
-            const editor = current.closest(EDITOR);
-            if (editor) return editor;
+            const match = current.closest(selector);
+            if (match) return match;
         }
         return null;
     }
@@ -105,8 +105,10 @@
     let resetPending = false;
 
     function update(element) {
-        const editor = closestEditor(element);
-        if (editor ? editor !== element : !element.matches(CONTENT)) {
+        const editor = closestMatch(element, EDITOR);
+        const nestedOverride = !editor && (element.hasAttribute('translate') || changes.has(element))
+            && closestMatch(element.parentElement ?? element.getRootNode().host, CONTENT);
+        if (editor ? editor !== element : !element.matches(CONTENT) && !nestedOverride) {
             restore(element);
             return;
         }
@@ -122,7 +124,7 @@
         mark(element);
     }
 
-    function editorChanged(mutation) {
+    function boundaryChanged(mutation) {
         const before = mutation.oldValue;
         const after = mutation.target.getAttribute(mutation.attributeName);
         if (mutation.attributeName === 'contenteditable') {
@@ -130,9 +132,11 @@
             return editable(before) !== editable(after);
         }
         if (mutation.attributeName === 'data-testid') return (before === 'editor') !== (after === 'editor');
+        if (['data-code-block', 'data-translation-exclude'].includes(mutation.attributeName)) return (before !== null) !== (after !== null);
         if (mutation.attributeName !== 'class') return false;
         const oldClasses = new Set((before ?? '').split(/\s+/));
-        return EDITOR_CLASSES.some(name => oldClasses.has(name) !== mutation.target.classList.contains(name));
+        const classes = [...EDITOR_CLASSES, 'code-block', 'hljs', 'katex', 'MathJax'];
+        return classes.some(name => oldClasses.has(name) !== mutation.target.classList.contains(name));
     }
 
     function handleMutations(mutations) {
@@ -140,8 +144,8 @@
         for (const mutation of mutations) {
             if (mutation.type === 'attributes') {
                 if (mutation.target.isConnected) {
-                    // 편집기 경계가 바뀔 때만 기존 자손도 다시 판정합니다.
-                    if (editorChanged(mutation)) roots.add(mutation.target);
+                    // 편집기·코드 경계가 바뀔 때만 기존 자손도 다시 판정합니다.
+                    if (boundaryChanged(mutation)) roots.add(mutation.target);
                     else update(mutation.target);
                 }
                 continue;
