@@ -257,3 +257,39 @@ test('an immutable attachShadow API still allows ordinary DOM and existing open 
     await protectedElement(page.locator('#ordinary'));
     await protectedElement(page.locator('#existing'));
 });
+
+test('same-origin frames, nested srcdoc and dynamic frame contents are protected from the parent', async ({ page }) => {
+    await install(page, '<iframe id="frame" srcdoc="&lt;code id=initial&gt;one()&lt;/code&gt;"></iframe>');
+    const frame = page.frameLocator('#frame');
+    await protectedElement(frame.locator('#initial'));
+    await page.locator('#frame').evaluate(node => {
+        node.contentDocument.body.insertAdjacentHTML('beforeend', '<iframe id="nested" srcdoc="&lt;code id=deep&gt;deep()&lt;/code&gt;"></iframe><code id="later">later()</code>');
+    });
+    await protectedElement(frame.locator('#later'));
+    await protectedElement(frame.frameLocator('#nested').locator('#deep'));
+});
+
+test('about:blank frames and navigation to a fresh srcdoc document are reattached', async ({ page }) => {
+    await install(page);
+    await page.evaluate(() => {
+        const frame = document.createElement('iframe');
+        frame.id = 'frame';
+        document.body.append(frame);
+        frame.contentDocument.body.innerHTML = '<code id="blank">blank()</code><div id="host"></div>';
+    });
+    const frame = page.frameLocator('#frame');
+    await protectedElement(frame.locator('#blank'));
+    await page.locator('#frame').evaluate(node => node.contentDocument.getElementById('host').attachShadow({ mode: 'open' }).innerHTML = '<code id="shadow">shadow()</code>');
+    await protectedElement(frame.locator('#shadow'));
+    await page.locator('#frame').evaluate(node => { node.srcdoc = '<code id="navigated">new()</code>'; });
+    await protectedElement(frame.locator('#navigated'));
+});
+
+test('opaque sandboxed frames are skipped without disrupting the accessible document', async ({ page }) => {
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await install(page, '<iframe sandbox srcdoc="&lt;code id=opaque&gt;x()&lt;/code&gt;"></iframe><code id="top">top()</code>');
+    await protectedElement(page.locator('#top'));
+    await expect(page.frameLocator('iframe').locator('#opaque')).not.toHaveAttribute('translate');
+    expect(errors).toEqual([]);
+});

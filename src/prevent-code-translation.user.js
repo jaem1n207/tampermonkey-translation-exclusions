@@ -17,7 +17,6 @@
 
     const INSTALLED = Symbol.for('jaem1n207.translationExclusions');
     if (document[INSTALLED]) return;
-    Object.defineProperty(document, INSTALLED, { value: true });
 
     const EDITOR_CLASSES = ['ak-editor-content-area', 'tinymce-editor', 'fabric-editor', 'ProseMirror'];
     const EDITOR = [
@@ -40,6 +39,7 @@
     const changes = new WeakMap();
     const observed = new WeakSet();
     const captured = new WeakMap();
+    const frames = new WeakSet();
 
     function mark(element) {
         const saved = changes.get(element) ?? { classAdded: false, translate: undefined };
@@ -75,11 +75,22 @@
     }
 
     function discover(element) {
+        if (element.localName === 'iframe') watchFrame(element);
         const shadow = element.shadowRoot ?? captured.get(element);
         if (shadow) {
             if (observed.has(shadow)) scan(shadow);
             else observe(shadow);
         }
+    }
+
+    function watchFrame(frame) {
+        if (!frames.has(frame)) {
+            frames.add(frame);
+            frame.addEventListener('load', () => watchFrame(frame));
+        }
+        // 다른 출처와 opaque sandbox 문서는 부모에서 접근하지 않습니다.
+        const doc = frame.contentDocument;
+        if (doc) watchDocument(doc);
     }
 
     function closestEditor(element) {
@@ -166,23 +177,29 @@
         scan(root);
     }
 
-    const descriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'attachShadow');
-    if (descriptor && (descriptor.writable || descriptor.configurable)) {
-        Object.defineProperty(Element.prototype, 'attachShadow', {
-            ...descriptor,
-            value: function attachShadow(...args) {
-                const root = Reflect.apply(descriptor.value, this, args);
-                // mode를 바꾸지 않고 새 closed root의 반환값도 추적합니다.
-                captured.set(this, root);
-                observe(root);
-                return root;
-            },
-        });
+    function watchDocument(doc) {
+        if (doc[INSTALLED] || !doc.defaultView) return;
+        Object.defineProperty(doc, INSTALLED, { value: true });
+        const prototype = doc.defaultView.Element.prototype;
+        const descriptor = Object.getOwnPropertyDescriptor(prototype, 'attachShadow');
+        if (descriptor && (descriptor.writable || descriptor.configurable)) {
+            Object.defineProperty(prototype, 'attachShadow', {
+                ...descriptor,
+                value: function attachShadow(...args) {
+                    const root = Reflect.apply(descriptor.value, this, args);
+                    // mode를 바꾸지 않고 새 closed root의 반환값도 추적합니다.
+                    captured.set(this, root);
+                    observe(root);
+                    return root;
+                },
+            });
+        }
+        observe(doc);
+        if (doc.readyState === 'loading') {
+            // 파서가 생성한 declarative open Shadow DOM도 로드 종료 시 한 번 수집합니다.
+            doc.addEventListener('DOMContentLoaded', () => scan(doc), { once: true });
+        }
     }
 
-    observe(document);
-    if (document.readyState === 'loading') {
-        // 파서가 생성한 declarative open Shadow DOM도 로드 종료 시 한 번 수집합니다.
-        document.addEventListener('DOMContentLoaded', () => scan(document), { once: true });
-    }
+    watchDocument(document);
 })();
