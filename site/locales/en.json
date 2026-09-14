@@ -1,0 +1,125 @@
+{
+  "locale": "en",
+  "label": "English",
+  "ogLocale": "en_US",
+  "scriptName": "Prevent Code Translation",
+  "scriptDescription": "Keep code, math, and editors untranslated during full-page translation, including dynamically added content.",
+  "pageTitle": "Prevent Code Translation — Keep code original",
+  "pageDescription": "Read translated documentation without translating its code. A free Tampermonkey userscript for code blocks, math, editors, and dynamically added content.",
+  "nav": {
+    "coverage": "What it protects",
+    "setup": "Get started",
+    "questions": "Before you install",
+    "language": "Language",
+    "skip": "Skip to content"
+  },
+  "hero": {
+    "line1": "Translate the page.",
+    "line2": "Keep the code.",
+    "body": "Read documentation in your language while keeping code, commands, and formulas in their original form.",
+    "primary": "Install with Tampermonkey",
+    "secondary": "Also on Greasy Fork",
+    "note": "Free userscript. Requires Tampermonkey.",
+    "existing": "Already installed? Use Check for updates in Tampermonkey.",
+    "compatibility": "Your translator must respect “do not translate” markers."
+  },
+  "demo": {
+    "label": "See the idea",
+    "original": "Original page",
+    "translated": "Translated page",
+    "targetLang": "es",
+    "targetText": "Busca los productos disponibles.",
+    "proseLabel": "Page text can change",
+    "codeLabel": "Code stays original",
+    "caption": "Illustration only. This is not a live translator test."
+  },
+  "coverage": {
+    "title": "Keep the parts that need to be exact.",
+    "items": [
+      {
+        "title": "Code & commands",
+        "body": "Code blocks, inline code, keyboard shortcuts, and explicitly marked code containers."
+      },
+      {
+        "title": "Math & editors",
+        "body": "Formulas, variables, and supported editing areas. Ordinary page text remains translatable."
+      },
+      {
+        "title": "Content loaded later",
+        "body": "New content from infinite scrolling, load more, and lazy loading, with repair of removed exclusion markers."
+      }
+    ],
+    "details": "Full coverage and limitations"
+  },
+  "trust": "Runs in your browser. No account. No page uploads.",
+  "setup": {
+    "title": "Install once. Keep reading.",
+    "steps": [
+      {
+        "title": "Add Tampermonkey",
+        "body": "Install the userscript manager in your browser.",
+        "link": "Get Tampermonkey"
+      },
+      {
+        "title": "Add this script",
+        "body": "Use the install button and confirm in Tampermonkey. Choose one installation source.",
+        "link": "Install the script"
+      },
+      {
+        "title": "Reload, then translate",
+        "body": "Reload the page you want to read, then start your usual translator.",
+        "link": "Check your installation"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Before you install",
+    "items": [
+      {
+        "question": "Will it work with my translator?",
+        "answer": "Only if your translator honors translation-exclusion markers. The installation check verifies those markers, not compatibility with a specific translator. The script cannot restore text already translated."
+      },
+      {
+        "question": "Why does it run on all websites?",
+        "answer": "So it can protect code on whichever page you translate. It adds exclusion markers locally and does not send page contents to a server. Some closed Shadow DOM and restricted frames cannot be reached."
+      },
+      {
+        "question": "How do updates work?",
+        "answer": "Enable automatic update checks in Tampermonkey. Updates arrive periodically from your installation source, so a new release may not appear immediately. Reload open pages after updating. No reinstall needed."
+      }
+    ]
+  },
+  "footer": {
+    "source": "Source code",
+    "issues": "Report an issue",
+    "versionLoading": "Checking version…",
+    "version": "Version {version}",
+    "versionError": "Version unavailable — installation links still work."
+  },
+  "verify": {
+    "pageTitle": "Installation Check — Prevent Code Translation",
+    "pageDescription": "Check protection for code, math, editors, and dynamically added content in your browser.",
+    "title": "Check your installation",
+    "intro": "This page checks whether your installed script adds the expected protection markers. It does not add those markers itself.",
+    "instructions": "Reload after installing or updating, then use the button to check dynamically added content.",
+    "ordinary": "This ordinary sentence should remain eligible for translation.",
+    "editor": "Protected editor",
+    "button": "Load more · add dynamic code",
+    "disclaimer": "These checks verify exclusion markers, not compatibility with your translation extension. Check your installed version in Tampermonkey.",
+    "back": "Install / update",
+    "pass": "Pass",
+    "fail": "Not verified",
+    "frameTitle": "Same-origin iframe check",
+    "cases": [
+      "Initial code protection and attribute repair",
+      "Ordinary text remains translatable",
+      "Explicit code containers protected",
+      "Keyboard notation and math protected",
+      "Editor root protected",
+      "Editor contents left unchanged",
+      "Newly added code protected",
+      "New Shadow DOM protected",
+      "Same-origin iframe protected"
+    ]
+  }
+}

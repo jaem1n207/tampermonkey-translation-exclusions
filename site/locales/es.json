@@ -1,0 +1,125 @@
+{
+  "locale": "es",
+  "label": "Español",
+  "ogLocale": "es_ES",
+  "scriptName": "Evitar la traducción del código",
+  "scriptDescription": "Conserva el código, las fórmulas y los editores sin traducir al traducir páginas completas, incluido el contenido añadido dinámicamente.",
+  "pageTitle": "Evitar la traducción del código — Conserva el código original",
+  "pageDescription": "Lee la documentación traducida sin traducir su código. Un userscript gratuito para Tampermonkey que protege bloques de código, fórmulas, editores y contenido dinámico.",
+  "nav": {
+    "coverage": "Qué protege",
+    "setup": "Primeros pasos",
+    "questions": "Antes de instalar",
+    "language": "Idioma",
+    "skip": "Saltar al contenido"
+  },
+  "hero": {
+    "line1": "Traduce la página.",
+    "line2": "Conserva el código.",
+    "body": "Lee la documentación en tu idioma y conserva el código, los comandos y las fórmulas en su forma original.",
+    "primary": "Instalar con Tampermonkey",
+    "secondary": "También en Greasy Fork",
+    "note": "Userscript gratuito. Requiere Tampermonkey.",
+    "existing": "¿Ya lo instalaste? Usa la opción de buscar actualizaciones en Tampermonkey.",
+    "compatibility": "Tu traductor debe respetar las marcas de «no traducir»."
+  },
+  "demo": {
+    "label": "Así funciona",
+    "original": "Página original",
+    "translated": "Página traducida",
+    "targetLang": "es",
+    "targetText": "Encuentra los productos disponibles.",
+    "proseLabel": "El texto de la página puede cambiar",
+    "codeLabel": "El código se conserva",
+    "caption": "Ejemplo ilustrativo. No es una prueba con un traductor real."
+  },
+  "coverage": {
+    "title": "Conserva lo que debe ser exacto.",
+    "items": [
+      {
+        "title": "Código y comandos",
+        "body": "Bloques de código, fragmentos de código en el texto, atajos de teclado y áreas identificadas explícitamente como código."
+      },
+      {
+        "title": "Fórmulas y editores",
+        "body": "Fórmulas, variables y áreas de edición compatibles. El texto normal de la página sigue disponible para traducir."
+      },
+      {
+        "title": "Contenido que se carga después",
+        "body": "Contenido nuevo al usar desplazamiento infinito, cargar más o carga diferida. Restaura las marcas de «no traducir» eliminadas."
+      }
+    ],
+    "details": "Cobertura completa y limitaciones"
+  },
+  "trust": "Se ejecuta en tu navegador. Sin cuenta. Sin enviar el contenido de las páginas.",
+  "setup": {
+    "title": "Instálalo una vez. Sigue leyendo.",
+    "steps": [
+      {
+        "title": "Instala Tampermonkey",
+        "body": "Añade el gestor de userscripts a tu navegador.",
+        "link": "Obtener Tampermonkey"
+      },
+      {
+        "title": "Instala este script",
+        "body": "Usa el botón de instalación y confirma en Tampermonkey. Elige una sola fuente de instalación.",
+        "link": "Instalar el script"
+      },
+      {
+        "title": "Recarga y traduce",
+        "body": "Recarga la página que quieras leer y activa tu traductor habitual.",
+        "link": "Comprobar la instalación"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Antes de instalar",
+    "items": [
+      {
+        "question": "¿Funciona con mi traductor?",
+        "answer": "Solo si tu traductor respeta las marcas de «no traducir». La comprobación de la instalación verifica esas marcas, no la compatibilidad con un traductor concreto. El script no puede restaurar texto ya traducido."
+      },
+      {
+        "question": "¿Por qué se ejecuta en todos los sitios web?",
+        "answer": "Para proteger el código en cualquier página que traduzcas. Añade las marcas de «no traducir» de forma local y no envía el contenido de la página a un servidor. Algunos Shadow DOM cerrados y marcos con restricciones de acceso quedan fuera de su alcance."
+      },
+      {
+        "question": "¿Cómo funcionan las actualizaciones?",
+        "answer": "Activa la búsqueda automática de actualizaciones en Tampermonkey. Las actualizaciones se obtienen periódicamente de la fuente que usaste para instalar el script, por lo que una nueva versión puede tardar en aparecer. Después de actualizar, recarga las páginas abiertas. No hace falta reinstalarlo."
+      }
+    ]
+  },
+  "footer": {
+    "source": "Código fuente",
+    "issues": "Informar de un problema",
+    "versionLoading": "Comprobando la versión…",
+    "version": "Versión {version}",
+    "versionError": "Versión no disponible. Los enlaces de instalación siguen funcionando."
+  },
+  "verify": {
+    "pageTitle": "Comprobación de instalación — Evitar la traducción del código",
+    "pageDescription": "Comprueba en tu navegador la protección del código, las fórmulas, los editores y el contenido añadido dinámicamente.",
+    "title": "Comprueba la instalación",
+    "intro": "Esta página comprueba si el script instalado añade las marcas de protección esperadas. La propia página no añade esas marcas.",
+    "instructions": "Recarga después de instalar o actualizar y usa el botón para comprobar el contenido añadido dinámicamente.",
+    "ordinary": "Esta frase normal debe seguir disponible para traducir.",
+    "editor": "Editor protegido",
+    "button": "Cargar más · añadir código dinámico",
+    "disclaimer": "Estas comprobaciones verifican las marcas de «no traducir», no la compatibilidad con tu extensión de traducción. Consulta la versión instalada en Tampermonkey.",
+    "back": "Instalar / actualizar",
+    "pass": "Correcto",
+    "fail": "Sin verificar",
+    "frameTitle": "Comprobación de iframe del mismo origen",
+    "cases": [
+      "Protección del código inicial y restauración de atributos",
+      "Texto normal disponible para traducir",
+      "Áreas identificadas como código protegidas",
+      "Notación de teclado y fórmulas protegidas",
+      "Elemento raíz del editor protegido",
+      "Contenido del editor sin cambios",
+      "Código añadido dinámicamente protegido",
+      "Nuevos Shadow DOM protegidos",
+      "iframe del mismo origen protegido"
+    ]
+  }
+}

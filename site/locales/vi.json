@@ -1,0 +1,125 @@
+{
+  "locale": "vi",
+  "label": "Tiếng Việt",
+  "ogLocale": "vi_VN",
+  "scriptName": "Giữ nguyên mã khi dịch",
+  "scriptDescription": "Giữ nguyên mã, công thức và vùng soạn thảo khi dịch toàn trang, kể cả nội dung được thêm sau.",
+  "pageTitle": "Giữ nguyên mã khi dịch — Đọc bản dịch, giữ nguyên mã",
+  "pageDescription": "Đọc tài liệu đã dịch mà vẫn giữ nguyên mã. Userscript Tampermonkey miễn phí dành cho khối mã, công thức, vùng soạn thảo và nội dung được thêm sau.",
+  "nav": {
+    "coverage": "Nội dung được bảo vệ",
+    "setup": "Bắt đầu",
+    "questions": "Trước khi cài đặt",
+    "language": "Ngôn ngữ",
+    "skip": "Chuyển đến nội dung"
+  },
+  "hero": {
+    "line1": "Dịch cả trang.",
+    "line2": "Giữ nguyên mã.",
+    "body": "Đọc tài liệu bằng ngôn ngữ của bạn, với mã, lệnh và công thức được giữ nguyên như bản gốc.",
+    "primary": "Cài đặt bằng Tampermonkey",
+    "secondary": "Cũng có trên Greasy Fork",
+    "note": "Userscript miễn phí. Cần có Tampermonkey.",
+    "existing": "Đã cài đặt? Dùng chức năng kiểm tra cập nhật trong Tampermonkey.",
+    "compatibility": "Công cụ dịch của bạn cần hỗ trợ chỉ dẫn “không dịch”."
+  },
+  "demo": {
+    "label": "Cách hoạt động",
+    "original": "Trang gốc",
+    "translated": "Trang đã dịch",
+    "targetLang": "vi",
+    "targetText": "Tìm các sản phẩm hiện có.",
+    "proseLabel": "Văn bản được dịch",
+    "codeLabel": "Mã được giữ nguyên",
+    "caption": "Chỉ là minh họa, không phải kết quả kiểm tra công cụ dịch thực tế."
+  },
+  "coverage": {
+    "title": "Giữ nguyên những phần cần chính xác.",
+    "items": [
+      {
+        "title": "Mã & lệnh",
+        "body": "Khối mã, mã trong dòng, phím tắt và các vùng được đánh dấu rõ là mã."
+      },
+      {
+        "title": "Công thức & vùng soạn thảo",
+        "body": "Công thức, biến và các vùng soạn thảo được hỗ trợ. Văn bản thông thường trên trang vẫn có thể được dịch."
+      },
+      {
+        "title": "Nội dung tải sau",
+        "body": "Nội dung mới khi cuộn vô hạn, nhấn xem thêm hoặc tải theo nhu cầu. Chỉ dẫn “không dịch” được khôi phục nếu bị xóa."
+      }
+    ],
+    "details": "Chi tiết phạm vi hỗ trợ và giới hạn"
+  },
+  "trust": "Chạy trong trình duyệt. Không cần tài khoản. Không tải nội dung trang lên máy chủ.",
+  "setup": {
+    "title": "Cài một lần. Đọc tiếp thôi.",
+    "steps": [
+      {
+        "title": "Cài Tampermonkey",
+        "body": "Cài trình quản lý userscript vào trình duyệt.",
+        "link": "Tải Tampermonkey"
+      },
+      {
+        "title": "Cài script này",
+        "body": "Nhấn nút cài đặt rồi xác nhận trong Tampermonkey. Chỉ chọn một nguồn cài đặt.",
+        "link": "Cài đặt script"
+      },
+      {
+        "title": "Tải lại trang rồi dịch",
+        "body": "Tải lại trang bạn muốn đọc rồi bật công cụ dịch thường dùng.",
+        "link": "Kiểm tra cài đặt"
+      }
+    ]
+  },
+  "faq": {
+    "title": "Trước khi cài đặt",
+    "items": [
+      {
+        "question": "Có hoạt động với công cụ dịch của tôi không?",
+        "answer": "Chỉ khi công cụ dịch hỗ trợ chỉ dẫn “không dịch”. Trang kiểm tra cài đặt chỉ kiểm tra các chỉ dẫn này, không xác nhận khả năng tương thích với một công cụ dịch cụ thể. Script không thể khôi phục văn bản đã bị dịch."
+      },
+      {
+        "question": "Tại sao script chạy trên mọi trang web?",
+        "answer": "Để bảo vệ mã trên bất kỳ trang nào bạn dịch. Script thêm chỉ dẫn “không dịch” ngay trong trình duyệt và không gửi nội dung trang đến máy chủ. Script không truy cập được một số Shadow DOM đóng và các khung bị hạn chế truy cập."
+      },
+      {
+        "question": "Script được cập nhật như thế nào?",
+        "answer": "Bật kiểm tra cập nhật tự động trong Tampermonkey. Bản cập nhật được lấy định kỳ từ nguồn cài đặt, nên phiên bản mới có thể chưa xuất hiện ngay. Sau khi cập nhật, hãy tải lại các trang đang mở. Không cần cài lại."
+      }
+    ]
+  },
+  "footer": {
+    "source": "Mã nguồn",
+    "issues": "Báo lỗi",
+    "versionLoading": "Đang kiểm tra phiên bản…",
+    "version": "Phiên bản {version}",
+    "versionError": "Chưa lấy được phiên bản — các liên kết cài đặt vẫn dùng được."
+  },
+  "verify": {
+    "pageTitle": "Kiểm tra cài đặt — Giữ nguyên mã khi dịch",
+    "pageDescription": "Kiểm tra khả năng bảo vệ mã, công thức, vùng soạn thảo và nội dung được thêm sau trong trình duyệt.",
+    "title": "Kiểm tra cài đặt",
+    "intro": "Trang này kiểm tra xem script đã cài có thêm đúng các chỉ dẫn “không dịch” vào mã HTML hay không. Bản thân trang không thêm những chỉ dẫn này.",
+    "instructions": "Tải lại trang sau khi cài đặt hoặc cập nhật, rồi nhấn nút để kiểm tra nội dung được thêm sau.",
+    "ordinary": "Câu văn thông thường này vẫn có thể được dịch.",
+    "editor": "Vùng soạn thảo được bảo vệ",
+    "button": "Xem thêm · thêm mã mới",
+    "disclaimer": "Các phép kiểm tra này xác nhận chỉ dẫn “không dịch”, không xác nhận khả năng tương thích với tiện ích dịch của bạn. Xem phiên bản đã cài trong Tampermonkey.",
+    "back": "Cài đặt / cập nhật",
+    "pass": "Đạt",
+    "fail": "Chưa xác nhận",
+    "frameTitle": "Kiểm tra iframe cùng nguồn",
+    "cases": [
+      "Bảo vệ mã ban đầu và khôi phục thuộc tính",
+      "Văn bản thông thường vẫn có thể được dịch",
+      "Bảo vệ các vùng được đánh dấu là mã",
+      "Ký hiệu phím và công thức được bảo vệ",
+      "Phần tử gốc của vùng soạn thảo được bảo vệ",
+      "Nội dung vùng soạn thảo không bị thay đổi",
+      "Mã mới thêm được bảo vệ",
+      "Shadow DOM mới được bảo vệ",
+      "iframe cùng nguồn được bảo vệ"
+    ]
+  }
+}

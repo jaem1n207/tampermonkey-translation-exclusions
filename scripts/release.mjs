@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFile, writeFile, mkdir, cp, appendFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, appendFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { buildSite } from './site.mjs';
 import { Script } from 'node:vm';
 
 export const repository = 'jaem1n207/tampermonkey-translation-exclusions';
@@ -102,7 +103,7 @@ async function main(command) {
         const source = await readFile(new URL(`../src/${filename}`, import.meta.url), 'utf8');
         const release = renderRelease(source, version, process.env.GITHUB_SHA);
         await mkdir('dist', { recursive: true });
-        await cp(new URL('../site/', import.meta.url), 'dist', { recursive: true });
+        await buildSite('dist');
         await Promise.all([
             writeFile(`dist/${filename}`, release.script),
             writeFile(`dist/${metadataFilename}`, release.meta),
