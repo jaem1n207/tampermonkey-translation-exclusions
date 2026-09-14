@@ -146,3 +146,23 @@ test('semantic symbols, keyboard keys and math renderers retain their original n
     for (const id of ['keys', 'output', 'variable', 'math', 'katex', 'mathjax']) await protectedElement(page.locator(`#${id}`));
     await expect(page.locator('#ordinary')).not.toHaveAttribute('translate');
 });
+
+
+test('editor boundaries are protected without rewriting their contents', async ({ page }) => {
+    await install(page, '<div contenteditable="true" id="editor"><span>write here</span><code id="code">x()</code></div>');
+    await protectedElement(page.locator('#editor'));
+    await expect(page.locator('#code')).not.toHaveAttribute('translate');
+    await expect(page.locator('#editor span')).not.toHaveAttribute('translate');
+});
+
+test('entering and leaving editor mode reconciles existing descendants', async ({ page }) => {
+    await install(page, '<section id="host"><code id="code">x()</code></section>');
+    for (const [attribute, value] of [['contenteditable', 'true'], ['class', 'ProseMirror'], ['data-testid', 'editor']]) {
+        await page.locator('#host').evaluate((node, [attribute, value]) => node.setAttribute(attribute, value), [attribute, value]);
+        await protectedElement(page.locator('#host'));
+        await expect(page.locator('#code')).not.toHaveAttribute('translate');
+        await page.locator('#host').evaluate((node, attribute) => node.removeAttribute(attribute), attribute);
+        await expect(page.locator('#host')).not.toHaveAttribute('translate');
+        await protectedElement(page.locator('#code'));
+    }
+});
