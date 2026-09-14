@@ -35,6 +35,8 @@
         '.katex', 'mjx-container', '.MathJax',
     ].join(',');
     const PROTECTED = '.notranslate[translate="no"]';
+    const BOUNDARY_CLASSES = [...EDITOR_CLASSES, 'code-block', 'hljs', 'katex', 'MathJax'];
+    const BOUNDARY_CLASS = new RegExp(`(?:^|\\s)(?:${BOUNDARY_CLASSES.join('|')})(?=\\s|$)`);
 
     const changes = new WeakMap();
     const observed = new WeakSet();
@@ -67,9 +69,12 @@
     }
 
     function scan(root) {
-        if (root.nodeType === Node.ELEMENT_NODE) update(root);
+        if (root.nodeType === Node.ELEMENT_NODE) {
+            update(root);
+            discover(root);
+        }
+        if (!root.firstElementChild) return;
         for (const element of root.querySelectorAll(`${CONTENT}, ${EDITOR}, .notranslate, [translate]`)) update(element);
-        if (root.nodeType === Node.ELEMENT_NODE) discover(root);
         // Shadow DOM은 일반 자손 검색에 포함되지 않아 추가된 부분에서 호스트도 찾습니다.
         for (const element of root.querySelectorAll('*')) discover(element);
     }
@@ -105,10 +110,12 @@
     let resetPending = false;
 
     function update(element) {
+        const content = element.matches(CONTENT);
+        if (!content && !changes.has(element) && !element.hasAttribute('translate') && !element.matches(EDITOR)) return;
         const editor = closestMatch(element, EDITOR);
-        const nestedOverride = !editor && (element.hasAttribute('translate') || changes.has(element))
+        const nestedOverride = !content && !editor && (element.hasAttribute('translate') || changes.has(element))
             && closestMatch(element.parentElement ?? element.getRootNode().host, CONTENT);
-        if (editor ? editor !== element : !element.matches(CONTENT) && !nestedOverride) {
+        if (editor ? editor !== element : !content && !nestedOverride) {
             restore(element);
             return;
         }
@@ -134,9 +141,9 @@
         if (mutation.attributeName === 'data-testid') return (before === 'editor') !== (after === 'editor');
         if (['data-code-block', 'data-translation-exclude'].includes(mutation.attributeName)) return (before !== null) !== (after !== null);
         if (mutation.attributeName !== 'class') return false;
+        if (!BOUNDARY_CLASS.test(before ?? '') && !BOUNDARY_CLASS.test(after ?? '')) return false;
         const oldClasses = new Set((before ?? '').split(/\s+/));
-        const classes = [...EDITOR_CLASSES, 'code-block', 'hljs', 'katex', 'MathJax'];
-        return classes.some(name => oldClasses.has(name) !== mutation.target.classList.contains(name));
+        return BOUNDARY_CLASSES.some(name => oldClasses.has(name) !== mutation.target.classList.contains(name));
     }
 
     function handleMutations(mutations) {
@@ -146,7 +153,8 @@
                 if (mutation.target.isConnected) {
                     // 편집기·코드 경계가 바뀔 때만 기존 자손도 다시 판정합니다.
                     if (boundaryChanged(mutation)) roots.add(mutation.target);
-                    else update(mutation.target);
+                    // 자체 속성 쓰기로 생긴 알림은 조상을 다시 탐색할 필요가 없습니다.
+                    else if (!mutation.target.matches(PROTECTED)) update(mutation.target);
                 }
                 continue;
             }

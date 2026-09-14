@@ -311,3 +311,20 @@ test('changing a container code marker reconciles descendant translation overrid
     await expect(page.locator('#override')).toHaveAttribute('translate', 'yes');
     await expect(page.locator('#override')).not.toHaveClass(/notranslate/);
 });
+
+test('bulk insertion does not repeat ancestor walks for self-authored protection attributes', async ({ page }) => {
+    await install(page);
+    const walks = await page.evaluate(async () => {
+        let count = 0;
+        const original = Element.prototype.closest;
+        Element.prototype.closest = function (...args) { count++; return original.apply(this, args); };
+        const section = document.createElement('section');
+        section.innerHTML = '<pre><code>x()</code></pre>'.repeat(100);
+        document.body.append(section);
+        await new Promise(resolve => setTimeout(resolve, 0));
+        Element.prototype.closest = original;
+        return count;
+    });
+    expect(walks).toBeLessThanOrEqual(200);
+    await expect(page.locator('pre.notranslate[translate="no"], code.notranslate[translate="no"]')).toHaveCount(200);
+});
