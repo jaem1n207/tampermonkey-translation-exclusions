@@ -8,7 +8,7 @@ A Tampermonkey userscript that helps keep code, math, and editors untranslated d
 
 ## Getting started
 
-1. Open the install link in a browser with Tampermonkey. Update the existing script if already installed, and disable any older duplicate copies.
+1. Open the install link in a browser with Tampermonkey. If already installed, use **Check for updates** on its existing Tampermonkey entry before installing another copy.
 2. Enable automatic update checks in Tampermonkey. New versions arrive on your configured schedule.
 3. Reload the pages you want to use after installing or updating. Use the installation check page if protection seems to be missing.
 

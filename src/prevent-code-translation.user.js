@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         코드 번역 방지
+// @name         Prevent Code Translation
 // @namespace    http://tampermonkey.net/
 // @version      0.0.0
-// @description  코드·수식·편집기에 번역 제외 속성을 적용하고 동적 콘텐츠와 같은 출처의 프레임을 감시합니다.
+// @description  Mark code, math, and editors as non-translatable, including dynamic content and same-origin frames.
 // @author       이재민
 // @match        *://*/*
 // @run-at       document-start
@@ -26,8 +26,8 @@
         '[data-testid="editor"]',
         ...EDITOR_CLASSES.map(name => `.${name}`),
     ].join(',');
-    // 별도 처리 표시 대신 실제 속성으로 중복 작업을 거릅니다.
-    // 사이트별 추가 대상은 이 목록에 명확한 셀렉터로 지정합니다.
+    // Use the actual attributes to skip duplicate work, without a processed marker.
+    // Add explicit selectors here for site-specific targets.
     const CONTENT = [
         'pre', 'code', 'kbd', 'samp', 'var', 'math',
         'div.code-block', 'span.code-block', 'div.hljs', 'span.hljs',
@@ -60,7 +60,7 @@
         const saved = changes.get(element);
         if (!saved) return;
         changes.delete(element);
-        // 용도가 바뀌면 직접 추가한 값만 되돌리고 사이트의 기존 값은 보존합니다.
+        // When an element is repurposed, undo only our changes and preserve the site's original values.
         if (saved.classAdded) element.classList.remove('notranslate');
         if (saved.translate !== undefined && element.getAttribute('translate') === 'no') {
             if (saved.translate === null) element.removeAttribute('translate');
@@ -75,7 +75,7 @@
         }
         if (!root.firstElementChild) return;
         for (const element of root.querySelectorAll(`${CONTENT}, ${EDITOR}, .notranslate, [translate]`)) update(element);
-        // Shadow DOM은 일반 자손 검색에 포함되지 않아 추가된 부분에서 호스트도 찾습니다.
+        // Ordinary queries do not cross shadow roots; discover hosts within the added subtree.
         for (const element of root.querySelectorAll('*')) discover(element);
     }
 
@@ -93,7 +93,7 @@
             frames.add(frame);
             frame.addEventListener('load', () => watchFrame(frame));
         }
-        // 다른 출처와 opaque sandbox 문서는 부모에서 접근하지 않습니다.
+        // Cross-origin and opaque sandbox documents are not accessible from the parent.
         const doc = frame.contentDocument;
         if (doc) watchDocument(doc);
     }
@@ -121,7 +121,7 @@
         }
         if (element.matches(PROTECTED)) return;
         const count = repairs.get(element) ?? 0;
-        // 페이지가 같은 속성을 계속 지워도 microtask 루프로 화면을 멈추지 않습니다.
+        // Bound repairs so a competing observer cannot trap the page in a microtask loop.
         if (count >= 3) return;
         repairs.set(element, count + 1);
         if (!resetPending) {
@@ -151,9 +151,9 @@
         for (const mutation of mutations) {
             if (mutation.type === 'attributes') {
                 if (mutation.target.isConnected) {
-                    // 편집기·코드 경계가 바뀔 때만 기존 자손도 다시 판정합니다.
+                    // Rescan existing descendants only when an editor or code boundary changes.
                     if (boundaryChanged(mutation)) roots.add(mutation.target);
-                    // 자체 속성 쓰기로 생긴 알림은 조상을 다시 탐색할 필요가 없습니다.
+                    // Our own attribute writes do not need another ancestor walk.
                     else if (!mutation.target.matches(PROTECTED)) update(mutation.target);
                 }
                 continue;
@@ -166,7 +166,7 @@
         }
 
         for (const root of roots) {
-            // 같은 배치에 부모도 추가됐다면 부모를 탐색할 때 함께 처리합니다.
+            // An added ancestor already covers this node in the same batch.
             let covered = false;
             for (let parent = root.parentElement; parent; parent = parent.parentElement) {
                 if (roots.has(parent)) {
@@ -181,7 +181,7 @@
     function observe(root) {
         if (observed.has(root)) return;
         observed.add(root);
-        // 루트별 observer를 사용해 제거된 Shadow DOM을 전역 observer에 붙잡아 두지 않습니다.
+        // Use a separate observer per root so a global observer does not retain removed shadow trees.
         new MutationObserver(handleMutations).observe(root, {
             childList: true, subtree: true, attributes: true, attributeOldValue: true,
             attributeFilter: ['class', 'translate', 'contenteditable', 'data-testid', 'data-code-block', 'data-translation-exclude'],
@@ -199,7 +199,7 @@
                 ...descriptor,
                 value: function attachShadow(...args) {
                     const root = Reflect.apply(descriptor.value, this, args);
-                    // mode를 바꾸지 않고 새 closed root의 반환값도 추적합니다.
+                    // Track returned closed roots without changing their mode.
                     captured.set(this, root);
                     observe(root);
                     return root;
@@ -208,7 +208,7 @@
         }
         observe(doc);
         if (doc.readyState === 'loading') {
-            // 파서가 생성한 declarative open Shadow DOM도 로드 종료 시 한 번 수집합니다.
+            // Collect parser-created declarative open shadow roots once at the end of loading.
             doc.addEventListener('DOMContentLoaded', () => scan(doc), { once: true });
         }
     }
