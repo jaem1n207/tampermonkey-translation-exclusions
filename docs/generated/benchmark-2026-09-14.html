@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="ko"><meta charset="utf-8"><title>코드 번역 방지 검증</title>
+<html lang="en"><meta charset="utf-8"><title>Code translation protection benchmark</title>
 <style>body{font:16px/1.6 system-ui;max-width:960px;margin:40px auto;padding:0 20px}button{font:inherit;padding:8px 20px;cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f2f4f7;padding:20px}iframe{position:absolute;width:1px;height:1px;left:-10000px}</style>
-<h1>합성 DOM 회귀·성능 검증 스냅샷</h1>
-<p>원본 v0.2와 확장된 스크립트(596a3f7)의 스냅샷입니다. 설치 파일은 저장소의 GitHub Pages에서 받으세요. 브라우저에서 실행하면 동작 검사 16개와 합성 DOM 벤치마크를 다시 수행합니다. 외부 연결이나 추가 설치는 필요 없습니다.</p>
-<p>실제 DOM·MutationObserver를 사용합니다. 프레임과 타이머의 대기 시간은 제어된 큐로 대체합니다. 아래 CPU 시간은 대기 시간·테스트 DOM 생성·결과 검사를 제외한 스크립트 실행 구간의 합입니다. 각 구조에서 예열 2회 후 측정 9회의 중앙값을 비교합니다. 웹페이지 전체 성능이나 실제 번역기·에디터 호환성을 측정하지 않습니다.</p>
-<button id="run">검증 실행</button><pre id="result">실행 대기 중</pre>
+<h1>Synthetic DOM regression and performance snapshot</h1>
+<p>This snapshot compares the original v0.2 with the expanded script at 596a3f7. Install the current script from the repository's GitHub Pages site. Running this page repeats 16 behavior checks and synthetic DOM benchmarks without a network connection or additional installation.</p>
+<p>The harness uses real DOM and MutationObserver behavior, with frame and timer waits replaced by controlled queues. Measured times sum elapsed script execution, excluding waits, fixture creation, and result assertions. Each fixture compares the median of nine runs after two warm-ups. These measurements do not represent overall page performance or compatibility with actual translators and editors.</p>
+<p>Embedded sources retain their original metadata and comments to preserve the measured revisions.</p>
+<button id="run">Run checks</button><pre id="result">Ready to run</pre>
 <script>
 async function verify(sources) {
     const pause = async () => { await Promise.resolve(); await Promise.resolve(); };
@@ -241,7 +242,7 @@ const run = document.getElementById('run');
 const output = document.getElementById('result');
 run.addEventListener('click', async () => {
     run.disabled = true;
-    output.textContent = '검증 중…';
+    output.textContent = 'Running checks…';
     try { output.textContent = JSON.stringify(await verify(sources), null, 2); }
     catch (error) { output.textContent = error.stack; }
     finally { run.disabled = false; }
