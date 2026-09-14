@@ -2,7 +2,7 @@
 // @name         Prevent Code Translation
 // @namespace    http://tampermonkey.net/
 // @version      0.0.0
-// @description  Mark code, math, and editors as non-translatable, including dynamic content and same-origin frames.
+// @description  Keep code, math, and editors untranslated during full-page translation, including dynamically added content.
 // @author       이재민
 // @match        *://*/*
 // @run-at       document-start

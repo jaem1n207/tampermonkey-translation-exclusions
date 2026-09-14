@@ -18,6 +18,7 @@ export function loadLocale(code) {
 export function validateLocale(copy, reference = loadLocale('en'), path = '') {
     if (typeof reference === 'string') {
         assert(typeof copy === 'string' && copy.trim().length, `Missing text: ${path}`);
+        if (path === '.scriptName' || path === '.scriptDescription') assert.doesNotMatch(copy, /[\r\n\u2028\u2029]/, `Metadata must be one line: ${path}`);
         assert.deepEqual(copy.match(/\{\w+\}/g) ?? [], reference.match(/\{\w+\}/g) ?? [], `Changed placeholders: ${path}`);
     } else if (Array.isArray(reference)) {
         assert(Array.isArray(copy) && copy.length === reference.length, `Changed list: ${path}`);

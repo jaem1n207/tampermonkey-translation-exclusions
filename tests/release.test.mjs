@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { baseURL, filename, metadataFilename, repository, versionFor, compareVersions, metadata, renderRelease, shouldPublish, verifyDeployment } from '../scripts/release.mjs';
 
+import { localeCodes, loadLocale, validateLocale } from '../scripts/site.mjs';
+
 const source = await readFile(new URL(`../src/${filename}`, import.meta.url), 'utf8');
 const commit = 'a'.repeat(40);
 const version = '1.2.1';
@@ -95,4 +97,25 @@ test('mixed deployments, changed script bodies and missing files are rejected', 
     await assert.rejects(verifyDeployment({ fetcher: fixture({ [metadataFilename]: release.meta.replace(version, '1.1.1') }) }));
     await assert.rejects(verifyDeployment({ fetcher: fixture({ [filename]: `${release.script}\n// changed after build` }) }));
     await assert.rejects(verifyDeployment({ fetcher: fixture({ [filename]: undefined }) }));
+});
+
+test('release includes every localized name and description without changing the default identity', () => {
+    const english = loadLocale('en');
+    assert(release.meta.includes(`// @description  ${english.scriptDescription}\n`));
+    for (const code of localeCodes.filter(code => code !== 'en')) {
+        const copy = loadLocale(code);
+        assert(release.meta.includes(`// @name:${code} ${copy.scriptName}\n`));
+        assert(release.meta.includes(`// @description:${code} ${copy.scriptDescription}\n`));
+    }
+    assert.throws(() => renderRelease(source.replace('// ==/UserScript==', '// @name:ko duplicate\n// ==/UserScript=='), version, commit));
+});
+
+test('localized metadata cannot inject new header lines', () => {
+    for (const field of ['scriptName', 'scriptDescription']) {
+        for (const newline of ['\n', '\r', '\u2028', '\u2029']) {
+            const copy = loadLocale('ko');
+            copy[field] += `${newline}// @grant unsafeWindow`;
+            assert.throws(() => validateLocale(copy));
+        }
+    }
 });

@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir, appendFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
-import { buildSite } from './site.mjs';
+import { buildSite, localeCodes, loadLocale, validateLocale } from './site.mjs';
 import { Script } from 'node:vm';
 
 export const repository = 'jaem1n207/tampermonkey-translation-exclusions';
@@ -55,7 +55,17 @@ export function renderRelease(source, version, commit) {
     assert.match(commit ?? '', /^[0-9a-f]{40}$/, 'A complete source commit SHA is required');
     const initial = metadata(source);
     assert.equal(initial.fields.get('version'), '0.0.0', 'Source version is a placeholder, managed by the release build');
-    const script = source.replace(/^\/\/\s+@version\s+.+$/m, `// @version      ${version}`);
+    assert.doesNotMatch(initial.header, /^\/\/\s+@(?:name|description):/m, 'Localized metadata is managed by the release build');
+    const english = loadLocale('en');
+    assert.equal(english.scriptName, initial.fields.get('name'), 'Keep the installed script identity stable');
+    const localized = localeCodes.filter(code => code !== 'en').map(code => {
+        const copy = loadLocale(code);
+        validateLocale(copy, english);
+        return `// @name:${code} ${copy.scriptName}\n// @description:${code} ${copy.scriptDescription}`;
+    }).join('\n');
+    const script = source
+        .replace(/^\/\/\s+@version\s+.+$/m, `// @version      ${version}`)
+        .replace('// ==/UserScript==', `${localized}\n// ==/UserScript==`);
     new Script(script, { filename });
     const { header } = metadata(script);
     const manifest = { version, commit, repository, sha256: sha256(script), scriptURL: `${baseURL}/${filename}`, updateURL: `${baseURL}/${metadataFilename}` };
