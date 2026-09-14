@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../../src/prevent-code-translation.user.js', import.meta.url), 'utf8');
 import { localeCodes, loadLocale, renderVerification } from '../../scripts/site.mjs';
-const assets = new Map(await Promise.all(['site.js', 'verify.js', 'site.css'].map(async name => [name, await readFile(new URL(`../../site/assets/${name}`, import.meta.url), 'utf8')])));
+const assets = new Map(await Promise.all(['language.js', 'site.js', 'verify.js', 'site.css'].map(async name => [name, await readFile(new URL(`../../site/assets/${name}`, import.meta.url), 'utf8')])));
 
 async function openFixture(page, copy) {
     const html = renderVerification(copy);

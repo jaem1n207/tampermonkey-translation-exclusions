@@ -6,6 +6,8 @@ A Tampermonkey userscript that helps keep code, math, and editors untranslated d
 
 **[Install / update](https://jaem1n207.github.io/tampermonkey-translation-exclusions/)** · [Greasy Fork](https://greasyfork.org/en/scripts/595754-prevent-code-translation) · [Check installation](https://jaem1n207.github.io/tampermonkey-translation-exclusions/verify.html)
 
+The default link follows your browser language. Choose a language from the page menu to remember it for future visits.
+
 ## Getting started
 
 1. Open the install link in a browser with Tampermonkey. If already installed, use **Check for updates** on its existing Tampermonkey entry before installing another copy.

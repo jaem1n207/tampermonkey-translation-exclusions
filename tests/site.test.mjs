@@ -36,6 +36,8 @@ test('localized pages expose canonical language routes and working install links
         const prefix = code === 'en' ? './' : '../';
         assert(landing.includes(`href="${prefix}prevent-code-translation.user.js"`));
         assert(landing.includes('href="./verify.html"'));
+        assert(landing.includes(`?lang=${code}"`));
+        assert(landing.indexOf('assets/language.js') < landing.indexOf('<body>'));
         assert(landing.includes(`href="https://greasyfork.org/${code}/scripts/595754-prevent-code-translation?locale_override=1"`));
         assert(verify.includes(`src="${prefix}assets/verify.js"`));
     }
@@ -72,7 +74,7 @@ test('the production build emits every page, asset, and Greasy Fork sync source'
             assert.equal(await readFile(join(destination, localePath(code, 'verify.html')), 'utf8'), renderVerification(loadLocale(code)));
             assert.equal(await readFile(join(destination, `greasyfork-description${code === 'en' ? '' : `.${code}`}.md`), 'utf8'), renderDescription(loadLocale(code)));
         }
-        for (const asset of ['site.css', 'site.js', 'verify.js']) assert((await readFile(join(destination, 'assets', asset))).length > 0);
+        for (const asset of ['site.css', 'language.js', 'site.js', 'verify.js']) assert((await readFile(join(destination, 'assets', asset))).length > 0);
         assert((await readFile(join(destination, 'sitemap.xml'), 'utf8')).includes(`${siteURL}ja/`));
     } finally {
         await rm(destination, { recursive: true });

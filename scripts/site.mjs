@@ -36,7 +36,7 @@ export function localePath(code, page = '') {
 }
 
 function languageMenu(copy, prefix, page) {
-    return `<details class="languages"><summary>${escapeHTML(copy.label)} <span aria-hidden="true">⌄</span></summary><nav aria-label="${escapeHTML(copy.nav.language)}">${localeCodes.map((code, index) => `<a href="${prefix}${localePath(code, page)}" lang="${code}" hreflang="${code}"${code === copy.locale ? ' aria-current="page"' : ''}>${labels[index]}</a>`).join('')}</nav></details>`;
+    return `<details class="languages"><summary>${escapeHTML(copy.label)} <span aria-hidden="true">⌄</span></summary><nav aria-label="${escapeHTML(copy.nav.language)}">${localeCodes.map((code, index) => `<a href="${prefix}${localePath(code, page)}?lang=${code}" lang="${code}" hreflang="${code}"${code === copy.locale ? ' aria-current="page"' : ''}>${labels[index]}</a>`).join('')}</nav></details>`;
 }
 
 function shell(copy, content, check = false) {
@@ -51,6 +51,7 @@ function shell(copy, content, check = false) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
+<script src="${prefix}assets/language.js" data-locales="${localeCodes.join(',')}" data-page="${page}"></script>
 <title>${escapeHTML(title)}</title>
 <meta name="description" content="${escapeHTML(description)}">
 <link rel="canonical" href="${url}">
@@ -71,7 +72,7 @@ ${localeCodes.map(code => `<link rel="alternate" hreflang="${code}" href="${site
 <body>
 <a class="skip-link" href="#main">${escapeHTML(copy.nav.skip)}</a>
 <header class="site-header wrap">
-<a class="brand" href="${check ? './' : '#'}" translate="no"><span class="brand-mark" aria-hidden="true">{ }</span><span>Prevent Code<br>Translation</span></a>
+<a class="brand" data-language-link href="${check ? './' : '#'}" translate="no"><span class="brand-mark" aria-hidden="true">{ }</span><span>Prevent Code<br>Translation</span></a>
 <nav class="section-nav" aria-label="${escapeHTML(copy.scriptName)}">${check ? '' : `<a href="#coverage">${escapeHTML(copy.nav.coverage)}</a><a href="#setup">${escapeHTML(copy.nav.setup)}</a>`}</nav>
 ${languageMenu(copy, prefix, page)}
 </header>
@@ -105,7 +106,7 @@ export function renderLanding(copy) {
 <div class="compatibility wrap"><span aria-hidden="true">↳</span> ${e(copy.hero.compatibility)}</div>
 <section class="coverage wrap" id="coverage"><h2>${e(copy.coverage.title)}</h2><ul class="coverage-list">${copy.coverage.items.map(item => `<li><h3>${e(item.title)}</h3><p>${e(item.body)}</p></li>`).join('')}</ul><a class="text-link" href="${repoURL}/blob/main/docs/coverage.md">${e(copy.coverage.details)} <span aria-hidden="true">↗</span></a></section>
 <div class="trust-band"><p class="wrap">${e(copy.trust)}</p></div>
-<section class="setup wrap" id="setup"><h2>${e(copy.setup.title)}</h2><ol>${copy.setup.steps.map((step, index) => `<li><div><h3>${e(step.title)}</h3><p>${e(step.body)}</p><a href="${['https://www.tampermonkey.net/', install, './verify.html'][index]}">${e(step.link)} <span aria-hidden="true">↗</span></a></div></li>`).join('')}</ol></section>
+<section class="setup wrap" id="setup"><h2>${e(copy.setup.title)}</h2><ol>${copy.setup.steps.map((step, index) => `<li><div><h3>${e(step.title)}</h3><p>${e(step.body)}</p><a${index === 2 ? ' data-language-link' : ''} href="${['https://www.tampermonkey.net/', install, './verify.html'][index]}">${e(step.link)} <span aria-hidden="true">↗</span></a></div></li>`).join('')}</ol></section>
 <section class="questions wrap" id="questions"><h2>${e(copy.faq.title)}</h2><div>${copy.faq.items.map((item, index) => `<details${index === 0 ? ' open' : ''}><summary>${e(item.question)}</summary><p>${e(item.answer)}</p></details>`).join('')}</div></section>`);
 }
 
@@ -120,7 +121,7 @@ export function renderVerification(copy) {
 <p><kbd id="keys">Ctrl+C</kbd> <math id="math"><mi>x</mi><mo>+</mo><mn>1</mn></math></p>
 <div contenteditable="true" id="editor" aria-label="${e(copy.verify.editor)}"><code id="editor-code">editable code</code></div></div>
 <button class="button primary" id="add">${e(copy.verify.button)}</button><div id="dynamic"></div><ul id="results" aria-live="polite"></ul>
-<p class="small">${e(copy.verify.disclaimer)}</p><p><a href="./">${e(copy.verify.back)}</a> · <a href="${repoURL}/blob/main/docs/coverage.md">${e(copy.coverage.details)}</a></p>
+<p class="small">${e(copy.verify.disclaimer)}</p><p><a data-language-link href="./">${e(copy.verify.back)}</a> · <a href="${repoURL}/blob/main/docs/coverage.md">${e(copy.coverage.details)}</a></p>
 </section><script type="application/json" id="check-copy">${strings}</script><script src="${prefix}assets/verify.js" defer></script>`, true);
 }
 

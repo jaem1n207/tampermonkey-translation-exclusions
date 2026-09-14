@@ -6,6 +6,8 @@
 
 **[설치 / 업데이트](https://jaem1n207.github.io/tampermonkey-translation-exclusions/ko/)** · [Greasy Fork](https://greasyfork.org/ko/scripts/595754-prevent-code-translation?locale_override=1) · [설치 동작 확인](https://jaem1n207.github.io/tampermonkey-translation-exclusions/ko/verify.html)
 
+기본 주소는 브라우저의 선호 언어로 열립니다. 페이지의 언어 메뉴에서 직접 선택하면 다음 방문에도 유지됩니다.
+
 ## 사용 방법
 
 1. Tampermonkey가 설치된 브라우저에서 위 설치 링크를 엽니다. 이미 설치했다면 새로 설치하기 전에 기존 항목의 **업데이트 확인**을 실행하세요.

@@ -34,3 +34,13 @@ languages.addEventListener('keydown', event => {
         languages.querySelector('summary').focus();
     }
 });
+
+// Carry a manual choice between pages even if localStorage is blocked.
+const selectedLanguage = new URL(location.href).searchParams.get('lang');
+if (selectedLanguage === document.documentElement.lang) {
+    for (const link of document.querySelectorAll('[data-language-link]')) {
+        const url = new URL(link.href);
+        url.searchParams.set('lang', selectedLanguage);
+        link.href = url.href;
+    }
+}
