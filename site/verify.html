@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>번역 제외 스크립트 설치 확인</title>
+<style>body{font:16px/1.7 system-ui,sans-serif;max-width:760px;margin:48px auto;padding:0 24px;color:#17212b}pre{background:#f2f4f7;padding:16px}button{font:inherit;padding:8px 14px}li{margin:8px 0}.pass{color:#067647}.fail{color:#b42318}</style>
+<h1>설치 동작 확인</h1>
+<p>이 페이지는 번역 제외 속성을 직접 추가하지 않습니다. 설치된 UserScript가 아래 코드에 속성을 붙였는지 검사합니다.</p>
+<p>설치·업데이트 후 이 페이지를 새로고침하고, 아래 버튼을 눌러 동적 콘텐츠도 확인하세요.</p>
+<p id="ordinary">This ordinary sentence should remain eligible for translation.</p>
+<pre id="initial-pre"><code id="initial-code">const original = "Keep this code unchanged";</code></pre>
+<div contenteditable="true" aria-label="편집기 제외 확인"><code id="editor-code">editable code</code></div>
+<button id="add">더보기 · 동적 코드 추가</button>
+<div id="dynamic"></div>
+<ul id="results" aria-live="polite"></ul>
+<p>이 검사는 속성 적용 여부만 확인합니다. 설치된 버전은 Tampermonkey에서 확인하세요. 번역기 자체의 동작까지 검사하지 않습니다.</p>
+<p><a href="./">설치 페이지로 돌아가기</a></p>
+<script>
+const marked = element => element.classList.contains('notranslate') && element.getAttribute('translate') === 'no';
+function inspect() {
+    const cases = [
+        ['초기 pre·code 보호', marked(document.getElementById('initial-pre')) && marked(document.getElementById('initial-code'))],
+        ['일반 문장 유지', !marked(document.getElementById('ordinary'))],
+        ['에디터 내부 유지', !marked(document.getElementById('editor-code'))],
+    ];
+    const dynamic = document.querySelectorAll('#dynamic pre, #dynamic code');
+    if (dynamic.length) cases.push(['동적으로 추가된 pre·code 보호', [...dynamic].every(marked)]);
+    document.getElementById('results').replaceChildren(...cases.map(([label, passed]) => {
+        const item = document.createElement('li');
+        item.className = passed ? 'pass' : 'fail';
+        item.textContent = `${passed ? '통과' : '미확인'}: ${label}`;
+        return item;
+    }));
+}
+document.getElementById('add').addEventListener('click', () => {
+    document.getElementById('dynamic').insertAdjacentHTML('beforeend', '<pre><code>const loadedLater = true;</code></pre>');
+    setTimeout(inspect, 100);
+});
+setTimeout(inspect, 500);
+</script>
+</html>
