@@ -26,7 +26,9 @@
         '.ProseMirror',
     ].join(',');
     // 별도 처리 표시 대신 실제 속성으로 중복 작업을 거릅니다.
-    const TARGET = ':is(pre, code):not(.notranslate[translate="no"])';
+    // 사이트별 추가 대상은 이 목록에 명확한 셀렉터로 지정합니다.
+    const CONTENT = 'pre, code, div.code-block, span.code-block, div.hljs, span.hljs, [data-code-block], [data-translation-exclude]';
+    const TARGET = `:is(${CONTENT}):not(.notranslate[translate="no"])`;
 
     function mark(element) {
         if (!element.classList.contains('notranslate')) {
@@ -87,7 +89,7 @@
             }
             if (!covered) scan(root);
         }
-    }).observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'translate'] });
+    }).observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'translate', 'data-code-block', 'data-translation-exclude'] });
 
     if (document.documentElement) scan(document.documentElement);
 })();

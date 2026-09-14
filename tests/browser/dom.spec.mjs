@@ -96,3 +96,20 @@ test('competing attribute observers cannot cause an endless microtask loop', asy
     });
     expect(rejects).toBeLessThanOrEqual(3);
 });
+
+
+test('explicit div and span code containers are recognized without guessing prose', async ({ page }) => {
+    await install(page, '<div class="code-block" id="block">x()</div><span class="hljs" id="highlighted">y()</span><div data-code-block id="data">z()</div><span data-translation-exclude id="custom">identifier</span><p class="highlight language-en" id="prose">ordinary text</p>');
+    for (const id of ['block', 'highlighted', 'data', 'custom']) await protectedElement(page.locator(`#${id}`));
+    await expect(page.locator('#prose')).not.toHaveAttribute('translate');
+});
+
+test('code markers added after insertion trigger protection', async ({ page }) => {
+    await install(page, '<div id="class">x()</div><span id="data">y()</span>');
+    await page.evaluate(() => {
+        document.getElementById('class').classList.add('code-block');
+        document.getElementById('data').setAttribute('data-code-block', '');
+    });
+    await protectedElement(page.locator('#class'));
+    await protectedElement(page.locator('#data'));
+});
